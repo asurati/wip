@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Clocks on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/clocks/</link>
+    <description>Recent content in Clocks on w-i-p</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 15 Oct 2021 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://asurati.github.io/wip/tags/clocks/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Driving the HDMI Display Pipeline</title>
+      <link>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</guid>
+      <description>The demos have been relying on the firmware to setup the HDMI display pipeline and to provide them with a frame buffer to draw on.
+The program found here attempts to take the control of the pipeline from the firmware, and run it on its own.
+Because of the lack of documentation, the Linux vc4 driver was consulted to determine the registers to setup and the sequence of steps necessary, to disable and enable the pipeline.</description>
+    </item>
+    
+    <item>
+      <title>Pixel Clock: PLLH_PIX</title>
+      <link>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</link>
+      <pubDate>Thu, 14 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</guid>
+      <description>This post investigates the programming of the HDMI pixel clock, performed by the RPi firmware to push the pixels into the HDMI encoder at that frequency.
+Booting with the RPi firmware and the U-Boot, the actual resolution of the display is 1920x1080@60Hz. The resolution of the frame buffer might be lower - the HVS takes care of appropriately scaling and positioning the pixels.
+Below is the Modeline details about the 1920x1080@60Hz resolution.</description>
+    </item>
+    
+  </channel>
+</rss>

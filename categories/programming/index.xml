@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Programming on w-i-p</title>
+    <link>https://asurati.github.io/wip/categories/programming/</link>
+    <description>Recent content in Programming on w-i-p</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 27 Jun 2022 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="https://asurati.github.io/wip/categories/programming/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>HD 7350 demo: Texture</title>
+      <link>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.
+This post demonstrates utilizing an image as a texture, to add details to the surface of a square. The image is the one used here.
+ Preparation: The texture image is a JPEG of size 512x512. Extract the raw pixels in R8G8B8A8 format (equivalent to ABGR32, or 0xaabbggrr):
+$ convert -size 512x512 -depth 8 texture.jpg RBGA:texture.bin $ xxd -i texture.</description>
+    </item>
+    
+    <item>
+      <title>HD 7350 demo: MSAA 8x</title>
+      <link>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.
+This post demonstrates the HD7350 support for MSAA rendering, through the use of Color Mask and Fragment Mask, the former of which facilitates Fast Clear of a render surface, and the latter, allows drawing on compressed MSAA surfaces.
+ Color Mask: The Color Mask, or CMask, is a buffer, of size corresponding to the size of the target surface to which it is attached, which allows the GPU to mark the target surface as clear, without having to actually write the pixels on to the target surface.</description>
+    </item>
+    
+    <item>
+      <title>HD 7350 demo: A Triangle</title>
+      <link>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</link>
+      <pubDate>Tue, 31 May 2022 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</guid>
+      <description>Update #1 on: 2nd June, 2022.
+Update #2 on: 5th June, 2022.
+ Warning: Improperly programming a GPU, or a display, may damage the devices.
+This post demonstrates setting up a HD7350 pipeline to draw a triangle. The approach adopted here is that of choosing bare-metal programming over relying on established interfaces like the Linux DRM. That is not to say that Linux DRM cannot be used - it is possible to send compute or rendering commands to the GPU by directly interfacing with the DRM layer on Linux, or by moving up to an even higher abstraction provided by OpenGL/Vulkan APIs.</description>
+    </item>
+    
+    <item>
+      <title>G73/NV4B demo: Fan Control</title>
+      <link>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</guid>
+      <description>This is a demonstration of controlling the stock fan. The demo is based on the DCB details pasted on the GPU Passthrough, and EDID access post.
+Warning: Improperly programming a GPU, or a display, may cause harm to the devices.
+ The DCB: GPIO Assignment Table The offset to the GPIO Assignment table itself lies at offset 0xa from the start of the DCB.
+The DCB starts at offset 0x8dd6 within my BIOS ROM.</description>
+    </item>
+    
+    <item>
+      <title>G73/NV4B demo: GPU Passthrough, and EDID access</title>
+      <link>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</link>
+      <pubDate>Fri, 22 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</guid>
+      <description>This demo utilizes the VFIO feature of the Linux kernel to pass through a GeForce 7600 GT GPU to a guest VM running on the host. Then, the program running inside the guest VM configures a DDC (an I2C) bus on the GPU to access the EDID blocks of the attached display.
+The details about parsing the Video BIOS, and about driving the DDC bus were found by reading the DCB Specification and, the source code for the nouveau driver.</description>
+    </item>
+    
+    <item>
+      <title>Driving the HDMI Display Pipeline</title>
+      <link>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</guid>
+      <description>The demos have been relying on the firmware to setup the HDMI display pipeline and to provide them with a frame buffer to draw on.
+The program found here attempts to take the control of the pipeline from the firmware, and run it on its own.
+Because of the lack of documentation, the Linux vc4 driver was consulted to determine the registers to setup and the sequence of steps necessary, to disable and enable the pipeline.</description>
+    </item>
+    
+    <item>
+      <title>Pixel Clock: PLLH_PIX</title>
+      <link>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</link>
+      <pubDate>Thu, 14 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</guid>
+      <description>This post investigates the programming of the HDMI pixel clock, performed by the RPi firmware to push the pixels into the HDMI encoder at that frequency.
+Booting with the RPi firmware and the U-Boot, the actual resolution of the display is 1920x1080@60Hz. The resolution of the frame buffer might be lower - the HVS takes care of appropriately scaling and positioning the pixels.
+Below is the Modeline details about the 1920x1080@60Hz resolution.</description>
+    </item>
+    
+    <item>
+      <title>QPU Demo: Export HVS output to the system RAM</title>
+      <link>https://asurati.github.io/wip/post/2021/10/08/qpu-demo-export-hvs-output-to-the-system-ram/</link>
+      <pubDate>Fri, 08 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/08/qpu-demo-export-hvs-output-to-the-system-ram/</guid>
+      <description>This demo presents a way to configure HVS FIFO2/Channel2 and the Transposer (TXP) block to gather the scaled/converted/transformed scan-lines into a buffer inside the system RAM.
+The HVS FIFO2 has a choice in how its output is consumed - it can be consumed either by PV1, or by the TXP block. The RPi firmware, by default, seems to disable the FIFO2 output (DSP3_MUX), so that it is not connected to PV1.</description>
+    </item>
+    
+    <item>
+      <title>HVS and PV Settings</title>
+      <link>https://asurati.github.io/wip/post/2021/10/07/hvs-and-pv-settings/</link>
+      <pubDate>Thu, 07 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/07/hvs-and-pv-settings/</guid>
+      <description>This post investigates the contents of the registers belonging to the Hardware Video Scaler (HVS), and to the PixelValve (PV) devices.
+When a request is made to the MailBox interface for a Frame Buffer with required properties, the RPi firmware programs the HVS and the PV in order to drive the display accordingly.
+The demos have been requesting a resolution of 640x480, 32bpp, with a default pixel order of BGRA8888 (0xaarrggbb, or ARGB32).</description>
+    </item>
+    
+    <item>
+      <title>QPU Demo: Triangle with MSAA 4x</title>
+      <link>https://asurati.github.io/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/</link>
+      <pubDate>Tue, 05 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/</guid>
+      <description>This demo works with the same triangle as seen in earlier demos; the demo utilizes the full 3D pipeline, employs Coordinate and Vertex shaders that are not merely pass-through but that perform the Perspective and ViewPort transformations (the Model and Camera/View transformations are assumed to have been performed outside), and enables 4x multi-sampling for a smoother display of the triangle.
+The Coordinate and Vertex shaders perform the Matrix-Vector multiplication, in order to calculate the Clip Coordinates of each vertex, perform the Perspective divide to calculate the Normalized Device Coordinates, and perform the ViewPort Transformation to calculate the Screen Coordinates relative to the ViewPort Centre.</description>
+    </item>
+    
+    <item>
+      <title>QPU Demo: Triangle with a GL Pass-Through Shader</title>
+      <link>https://asurati.github.io/wip/post/2021/10/04/qpu-demo-triangle-with-a-gl-pass-through-shader/</link>
+      <pubDate>Mon, 04 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/04/qpu-demo-triangle-with-a-gl-pass-through-shader/</guid>
+      <description>This demo results in the same output image as displayed in Triangle With NV Shader, but this time the full 3D pipeline is employed, with the exception that the Coordinate and the Vertex Shaders are mere pass-through shaders.
+The Coordinate and the Vertex Shaders are each tasked with reading the input vertex attributes off the VPM (placed there by the Vertex Cache Manager), and writing shaded vertices in specific output formats back into the VPM.</description>
+    </item>
+    
+    <item>
+      <title>QPU Demo: Triangle with NV Shader</title>
+      <link>https://asurati.github.io/wip/post/2021/10/02/qpu-demo-triangle-with-nv-shader/</link>
+      <pubDate>Sat, 02 Oct 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/10/02/qpu-demo-triangle-with-nv-shader/</guid>
+      <description>This demo presents a method of programming the GPU to display a triangle, with the interpolation of the colours at the pixels covered by it. The graphics concepts used here borrow heavily from those of OpenGL.
+The GPU pipeline supports running in non-vertex-shading mode, or the NV mode. In this mode, pre-shaded vertices are presented to the pipeline. That is, the jobs of coordinate and vertex shader are done outside of the pipeline.</description>
+    </item>
+    
+    <item>
+      <title>QPU Demo: Binary NOT operation</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-binary-not-operation/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-binary-not-operation/</guid>
+      <description>This demo builds upon QPU Demo: DMA Transfers, and presents a method of importing four 16-element vectors of integers from VPM to QPU registers, performing a binary NOT on the elements, and exporting the results back to the VPM.
+ Transfer Methods: For QPU to be able to access the vectors and perform any calculations on them, they must first be brought from the system RAM, where they usually resides, into the VPM.</description>
+    </item>
+    
+    <item>
+      <title>QPU Demo: DMA Transfers</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-dma-transfers/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-dma-transfers/</guid>
+      <description>This demo presents a method of programming the V3D DMA controller to transfer four 16-element vectors of integers back and forth between the system RAM and the VPM.
+It is natural for the QPU to work with 16-element vectors. To that end, its registers can accommodate 16 32-bit values (there are indeed a few exceptions, however).
+In AMD terminology, a QPU can be said to process a wavefront made up of 16 workitems.</description>
+    </item>
+    
+    <item>
+      <title>QPU Demo: Interrupting the host</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-interrupting-the-host/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-interrupting-the-host/</guid>
+      <description>This is the first in hopefully a few more articles demonstrating one of the ways in which the RPi&amp;rsquo;s VideoCoreIV (vc4) GPU can be programmed.
+The 3D engine, V3D, is driven by the SIMD16 (physically SIMD4, but multiplexed over four consecutive clock cycles) processors known as QPUs, Quad Processing Units, or Quad Processors.
+In February 2014, Broadcom released a specification detailing the vc4 V3D architecture. That document is the primary basis supporting the work demonstrated here.</description>
+    </item>
+    
+  </channel>
+</rss>
