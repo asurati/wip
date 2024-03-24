@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Radeon on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/radeon/</link>
+    <description>Recent content in Radeon on w-i-p</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 27 Jun 2022 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/radeon/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>HD 7350 demo: Texture</title>
+      <link>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates utilizing an image as a texture, to add details to the surface of a square. The image is the one used here.&#xA;Preparation: The texture image is a JPEG of size 512x512. Extract the raw pixels in R8G8B8A8 format (equivalent to ABGR32, or 0xaabbggrr):&#xA;$ convert -size 512x512 -depth 8 texture.jpg RBGA:texture.bin $ xxd -i texture.</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: MSAA 8x</title>
+      <link>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates the HD7350 support for MSAA rendering, through the use of Color Mask and Fragment Mask, the former of which facilitates Fast Clear of a render surface, and the latter, allows drawing on compressed MSAA surfaces.&#xA;Color Mask: The Color Mask, or CMask, is a buffer, of size corresponding to the size of the target surface to which it is attached, which allows the GPU to mark the target surface as clear, without having to actually write the pixels on to the target surface.</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: A Triangle</title>
+      <link>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</link>
+      <pubDate>Tue, 31 May 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</guid>
+      <description>Update #1 on: 2nd June, 2022.&#xA;Update #2 on: 5th June, 2022.&#xA;Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates setting up a HD7350 pipeline to draw a triangle. The approach adopted here is that of choosing bare-metal programming over relying on established interfaces like the Linux DRM. That is not to say that Linux DRM cannot be used - it is possible to send compute or rendering commands to the GPU by directly interfacing with the DRM layer on Linux, or by moving up to an even higher abstraction provided by OpenGL/Vulkan APIs.</description>
+    </item>
+  </channel>
+</rss>

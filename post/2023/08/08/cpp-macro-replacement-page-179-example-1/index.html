@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CPP: Macro Replacement: Page 179, EXAMPLE 1 | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">CPP: Macro Replacement: Page 179, EXAMPLE 1</span></h1>
+
+<h2 class="date">2023/08/08</h2>
+</div>
+
+<main>
+<p>This post explains the EXAMPLE 1 given on Page# 179
+(page# that would be found printed on the page of a paper-copy, not the one
+displayed on a pdf reader application) of the working draft,
+dated April 1, 2023, of the
+<a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf">C2X</a>
+standard.</p>
+<hr>
+<h3 id="page-179-example-1"><strong>Page 179, EXAMPLE 1</strong></h3>
+<pre><code class="language-c">#define LPAREN() (
+#define G(Q) 42
+#define F(R, X, ...) __VA_OPT__(G R X) )
+int x = F(LPAREN(), 0, &lt;:-); // replaced by int x = 42;
+</code></pre>
+<p>The tokens for the identifiers <code>int</code> and <code>x</code> do not correspond to the names of
+any macro. Hence, they are output as they are, without any change.</p>
+<p>The token for the symbol <code>=</code> is not subject to replacement; it is output as it
+is, without any change.</p>
+<p>The macro-invocation is <code>F(LPAREN(), 0, &lt;:-)</code>. The macro <code>F</code> is variadic, and
+its invocation here does pass a non-empty argument-list corresponding to the
+trailing <code>...</code> of its parameter-list. Thus, <code>__VA_ARGS__</code> consists
+of a single argument made up of the non-empty token-sequence <code>&lt;:-</code>;
+<code>__VA_OPT__</code> is therefore obliged to expand the pp-tokens contained within it.</p>
+<p>To begin the macro expansion, the CPP pushes on to the <code>active-macro-stack-#0</code>
+an entry corresponding to this invocation of the macro <code>F</code>:</p>
+<pre><code>    // active-macro-stack-#0
+
+    F(LPAREN(), 0, &lt;:-)    &lt;---- bottom of the stack
+    ------------------------------------------------
+</code></pre>
+<p>The argument <code>LPAREN()</code> corresponds to the parameter <code>R</code>, the argument <code>0</code>
+corresponds to the parameter <code>X</code>, and the argument <code>&lt;:-</code> corresponds to the
+parameter <code>...</code>.</p>
+<hr>
+<h4 id="expansion-of-the-argument-lparen">Expansion of the argument <code>LPAREN()</code></h4>
+<p>Since the parameter <code>R</code> occurs in the replacement-list of the
+macro <code>F</code>, without being preceded by a <code>#</code> or a <code>##</code> and without being
+followed by a <code>##</code>, the corresponding argument <code>LPAREN()</code> is subject to
+argument-expansion. As it turns out, <code>LPAREN</code> is the name of a function-like
+macro, and its invocation exists as the first argument to the macro <code>F</code>.</p>
+<p>A new active-macro-stack, <code>active-macro-stack-#1</code> is initialized with the entry
+corresponding to the invocation <code>LPAREN()</code>.</p>
+<pre><code>    // active-macro-stack-#1
+
+    LPAREN()    &lt;---- bottom of the stack
+    -------------------------------------
+</code></pre>
+<p>The macro takes no parameters, and is provided with no arguments. Its
+replacement-list is just <code>(</code>.</p>
+<pre><code>    LPAREN()    (rest is empty)
+    +-------
+    |
+    v
+    (
+</code></pre>
+<p>The CPP rescans the token-sequence <code>(</code>. The token for the symbol <code>(</code> is not
+subject to replacement, hence it is output as it is, without any change.
+This also means that the parameter <code>R</code> of the macro <code>F</code> is now bound to the
+fully-expanded argument <code>(</code>.</p>
+<p>At this stage, the CPP has completed the processing of the <code>LPAREN()</code>
+invocation. That is, the processing now will move out of the boundaries of the
+replacement-list of the invocation, without any previous processing
+pending. The invocation no longer influences the macro processing that lies
+ahead. Its entry from the <code>active-macro-stack-#1</code> is removed, and with that
+removal, the stack becomes empty.</p>
+<p>The CPP then attempts to process the <code>rest</code> of the tokens, but it is empty.</p>
+<p>With that, the full expansion of the argument <code>LPAREN()</code> is complete.</p>
+<hr>
+<h4 id="expansion-of-the-argument-0">Expansion of the argument <code>0</code></h4>
+<p>The argument <code>0</code>, corresponding to the parameter <code>X</code>, is not an identifier;
+it is not subject to the argument-expansion (IOW, its full expansion is the
+same as its current form.)</p>
+<hr>
+<h4 id="expansion-of-the-argument-for-__va_args__">Expansion of the argument for <code>__VA_ARGS__</code></h4>
+<p>The argument corresponding to the parameter <code>__VA_ARGS__</code> is not subject to
+argument-expansion.</p>
+<hr>
+<h4 id="expansion-of-the-argument-for-__va_opt__">Expansion of the argument for <code>__VA_OPT__</code></h4>
+<p>Since the argument corresponding to <code>...</code> is non-empty, the parameter
+<code>__VA_OPT__</code> that occurs in the replacement-list of the macro must be replaced
+with the expansion of its pp-tokens. This expansion is carried out with respect
+to the <code>active-macro-stack-#0</code> instead of creating a new stack as is usually
+done for argument-expansion.</p>
+<p>The identifier <code>G</code> matches the name of a function-like macro <code>G</code>, but within
+<code>__VA_OPT__</code> here, <code>G</code> is not followed by a <code>(</code> token. Moreover, the name <code>G</code>
+does not match with the name of any active macro (i.e. with the name of any
+macro that has an entry in the <code>active-macro-stack-#0</code>.) Hence, this token for
+the identifier <code>G</code> is allowed replacement during rescanning.</p>
+<p>The identifier <code>R</code> represents the parameter <code>R</code> of the macro <code>F</code>. Its expansion
+is <code>(</code>. (Note: if <code>R</code> were additionally a macro name, the parameter name seems
+to bind more strongly than the macro name. That is, a macro parameter named <code>R</code>
+hides a macro named <code>R</code>.)</p>
+<p>The identifier <code>X</code> represents the parameter <code>X</code> of the macro <code>F</code>. Its expansion
+is <code>0</code>.</p>
+<hr>
+<h4 id="argument-substitution">Argument Substitution</h4>
+<p>After the parameters are substituted with the corresponding, expanded
+arguments, the state is:</p>
+<pre><code>    F(LPAREN(), 0, &lt;:-)     (rest is ;)
+    +------------------
+    | after arg-substitution
+    v---
+    G(0)
+</code></pre>
+<p>The state of the <code>active-macro-stack-#0</code> is:</p>
+<pre><code>    // active-macro-stack-#0
+
+    F(LPAREN(), 0, &lt;:-)    &lt;---- bottom of the stack
+    ------------------------------------------------
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>G(0)</code>. The identifier <code>G</code> is part of the
+replacement-list of the macro <code>F</code> currently being expanded. Its token was also
+not marked for non-replacement during the <code>__VA_OPT__</code> processing. The
+identifier also doesn&rsquo;t match with the name of any active macro. Hence, this
+token for the identifier <code>G</code> is allowed replacement during rescanning.</p>
+<p>But <code>G</code> is the name of a function-like macro, and a complete invocation of that
+macro exists, even without reading from the <code>rest</code> of the tokens, as shown
+above. Hence, the invocation is processed.</p>
+<p>The CPP pushes on to the <code>active-macro-stack-#0</code> an entry corresponding to the
+invocation <code>G(0)</code>:</p>
+<pre><code>    // active-macro-stack-#0
+
+    G(0)                   &lt;---- top of the stack
+    F(LPAREN(), 0, &lt;:-)    &lt;---- bottom of the stack
+    ------------------------------------------------
+</code></pre>
+<h4 id="expansion-of-the-argument-0-1">Expansion of the argument <code>0</code></h4>
+<p>The argument <code>0</code>, corresponding to the parameter <code>Q</code>, is not an identifier;
+it is not subject to the argument-expansion (IOW, its full expansion is the
+same as its current form.)</p>
+<hr>
+<h4 id="argument-substitution-1">Argument Substitution</h4>
+<p>After the parameters are substituted with the corresponding, expanded
+arguments, the state is:</p>
+<pre><code>    F(LPAREN(), 0, &lt;:-)     (rest is ;)
+    +------------------
+    | after arg-substitution
+    v---
+    G(0)
+    +---
+    | after arg-substitution
+    v-
+    42
+</code></pre>
+<p>The state of the <code>active-macro-stack-#0</code> is:</p>
+<pre><code>    // active-macro-stack-#0
+
+    G(0)                   &lt;---- top of the stack
+    F(LPAREN(), 0, &lt;:-)    &lt;---- bottom of the stack
+    ------------------------------------------------
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>42</code>. The token for the symbol <code>42</code> is
+not subject to replacement, hence it is output as it is, without any change.</p>
+<p>At this stage, the CPP has completed the processing of the <code>G(0)</code> invocation.
+That is, the processing now will move out of the boundaries of the
+replacement-list of the invocation, without any previous processing
+pending. The invocation no longer influences the macro processing that lies
+ahead. Its entry from the <code>active-macro-stack-#0</code> is removed.</p>
+<p>With that removal, the CPP has also completed the processing of the
+<code>F(LPAREN(), 0, &lt;:-)</code> invocation. The invocation no longer influences the
+macro processing that lies ahead. Its entry from the <code>active-macro-stack-#0</code> is
+removed, too.</p>
+<p>The <code>active-macro-stack-#0</code> is now empty:</p>
+<pre><code>    // active-macro-stack-#0
+
+    (stack is empty)
+    ------------------------------------------------
+</code></pre>
+<p>The CPP next moves into the <code>rest</code> of the tokens from the source file. The only
+token left is <code>;</code>, and it is not subject to replacement. It is output as it is,
+without any change.</p>
+<hr>
+<h3 id="result"><strong>Result</strong></h3>
+<p>The invocation <code>F(LPAREN(), 0, &lt;:-)</code> expanded to a single token, <code>42</code>.
+Hence, the CPP outputs:</p>
+<pre><code class="language-c">int x = 42;
+</code></pre>
+<h3 id="notes"><strong>Notes</strong></h3>
+<p>The expansion of the <code>__VA_OPT__</code> parameter is carried out using the same
+active-macro-stack as the one on which the <code>__VA_OPT__</code>-containing
+macro-invocation resides.</p>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

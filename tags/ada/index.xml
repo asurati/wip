@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Ada on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/ada/</link>
+    <description>Recent content in Ada on w-i-p</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 05 Dec 2023 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/ada/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>ada: Building ada-mode for Emacs</title>
+      <link>https://asurati.github.io/wip/post/2023/12/05/ada-building-ada-mode-for-emacs/</link>
+      <pubDate>Tue, 05 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/12/05/ada-building-ada-mode-for-emacs/</guid>
+      <description>This post lists steps that build ada-mode for Emacs. The build depends on the GNAT FSF compiler being available on the build system. On Arch Linux, the compiler is available as the gcc-ada package.&#xA;# build-ada-mode.sh # Run as: sh build-ada-mode.sh set -e set -u DOWNLOAD=true SRC=/tmp/src TOOLS=$HOME/tools/ada LR1_SRC=ada_annex_p_lr1_parse_table.txt-8.1.0 LR1_TAB=ada_annex_p_lr1_re2c_parse_table.txt LR1_URL=https://download.savannah.nongnu.org/releases/ada-mode/$LR1_SRC SAVE=$PATH mkdir -p $SRC if [ &amp;quot;$DOWNLOAD&amp;quot; == &amp;quot;true&amp;quot; ]; then cd $SRC git clone --depth 1 https://github.com/AdaCore/gprbuild.git git clone --depth 1 https://github.</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Vulkan on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/vulkan/</link>
+    <description>Recent content in Vulkan on w-i-p</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 24 Mar 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/vulkan/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>vulkan: Dissecting vkcube: Build</title>
+      <link>https://asurati.github.io/wip/post/2024/03/24/vulkan-dissecting-vkcube-build/</link>
+      <pubDate>Sun, 24 Mar 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2024/03/24/vulkan-dissecting-vkcube-build/</guid>
+      <description>This post lists the steps to build debug versions of mesa, libdrm and vkcube.&#xA;# Build debug versions of mesa, libdrm, and vulkan-tools # build-mesa-vt-dbg.sh # Run as: sh build-mesa-vt-dbg.sh set -e set -u DOWNLOAD=false SRC=/tmp/src BLD=/tmp/bld INSTALL=$HOME/tools/vt-dbg mkdir -p $SRC if [ &amp;quot;$DOWNLOAD&amp;quot; == &amp;quot;true&amp;quot; ]; then cd $SRC git clone --depth 1 https://github.com/KhronosGroup/Vulkan-Headers.git vh git clone --depth 1 https://github.com/KhronosGroup/Vulkan-Tools.git vt git clone --depth 1 https://github.com/zeux/volk.git volk git clone --depth 1 https://github.</description>
+    </item>
+  </channel>
+</rss>

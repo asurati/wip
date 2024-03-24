@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>cc: Context-Sensitive Parsing of alignas | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">cc: Context-Sensitive Parsing of alignas</span></h1>
+
+<h2 class="date">2023/09/14</h2>
+</div>
+
+<main>
+<p>This post demonstrates the ambiguity that arises when parsing the C23
+<code>AlignmentSpecifier</code> <a href="https://en.cppreference.com/w/c/language/_Alignas"><code>alignas</code></a>,
+and the context-sensitive nature of the parsing required to correctly
+parse the specifier.</p>
+<hr>
+<h3 id="the-ambiguity">The ambiguity:</h3>
+<p>The specifier is represented by the non-terminal <code>AlignmentSpecifier</code>
+in the C2x <a href="https://github.com/asurati/x24/blob/main/grammar.txt">grammar</a>:</p>
+<pre><code>    AlignmentSpecifier: alignas ( TypeName )
+    AlignmentSpecifier: alignas ( ConstantExpression )
+</code></pre>
+<p>The ambiguity arises from the fact that both <code>TypeName</code> and
+<code>ConstantExpression</code> can derive an <code>Identifier</code>.</p>
+<p>For e.g., in the declaration</p>
+<pre><code class="language-c">    alignas(a) int b;
+</code></pre>
+<p>the variable <code>b</code> is declared to be of type <code>int</code>, with its address aligned at
+the result of the expression <code>alignas(a)</code>.</p>
+<p>The identifier <code>a</code> can be a <code>TypedefName</code> (<code>TypeName</code> derives <code>TypedefName</code>):</p>
+<pre><code class="language-c">    typedef struct {
+        long double ld;
+    } a;
+</code></pre>
+<p>Or, it can be an identifier that represents a <code>ConstantExpression</code>
+(<code>ConstantExpression</code> derives <code>PrimaryExpression</code> derives <code>Identifier</code>):</p>
+<pre><code class="language-c">    constexpr int a = 32;
+</code></pre>
+<p>Or, it can be an identifier that represents a <code>ConstantExpression</code>
+(<code>ConstantExpression</code> derives <code>PrimaryExpression</code> derives
+<code>EnumerationConstant</code> derives <code>Identifier</code>):</p>
+<pre><code class="language-c">    enum {
+        a = 32,
+    };
+</code></pre>
+<hr>
+<h3 id="the-ambiguity-in-an-lr1-parser">The ambiguity in an LR(1) parser:</h3>
+<p>The collection of <a href="/wip/data/lr1.item.sets.txt.gz">canonical-LR(1)-item-sets</a>
+shows the reduce/reduce conflicts as described below.</p>
+<pre><code>print_item_set: item-set[   0]:k----------------------
+[TranslationObject -&gt; . TranslationUnit] jump=1
+print_item_set: item-set[   0]:-----------------------
+. . .
+[AlignmentSpecifier -&gt; . alignas ( TypeName )] jump=4025
+[AlignmentSpecifier -&gt; . alignas ( ConstantExpression )] jump=4025
+. . .
+print_item_set: item-set[   0]:done-------------------
+</code></pre>
+<pre><code>print_item_set: item-set[4025]:k----------------------
+[AlignmentSpecifier -&gt; alignas . ( TypeName )] jump=4026
+[AlignmentSpecifier -&gt; alignas . ( ConstantExpression )] jump=4026
+print_item_set: item-set[4025]:done-------------------
+</code></pre>
+<pre><code>print_item_set: item-set[4026]:k----------------------
+[AlignmentSpecifier -&gt; alignas ( . TypeName )] jump=4027
+[AlignmentSpecifier -&gt; alignas ( . ConstantExpression )] jump=4029
+print_item_set: item-set[4026]:-----------------------
+. . .
+[TypedefName -&gt; . Identifier] jump=983
+[PrimaryExpression -&gt; . Identifier] jump=983
+[EnumerationConstant -&gt; . Identifier] jump=983
+. . .
+print_item_set: item-set[4026]:done-------------------
+</code></pre>
+<pre><code>print_item_set: item-set[ 983]:k----------------------
+[TypedefName -&gt; Identifier .] las: ... ) ...
+[PrimaryExpression -&gt; Identifier .] las: ... ) ...
+[EnumerationConstant -&gt; Identifier .] las: ... ) ...
+print_item_set: item-set[ 983]:done-------------------
+</code></pre>
+<p>The parser experiences reduce/reduce conflicts, as it lands into the
+<code>item-set-#983</code> immediately after shifting the identifier <code>a</code>. The next
+available token in the input, and also the current look-head for the parser, is
+the punctuator <code>)</code>.</p>
+<hr>
+<h3 id="the-ambiguity-in-an-earley-parser">The ambiguity in an Earley parser:</h3>
+<p>In an Earley parser, the ambiguity manifests as two back-edges pointing to the
+completion of the non-terminal <code>AlignmentSpecifier</code>, corresponding to the two
+different ways the reduction to <code>AlignmentSpecifier</code> can be performed.</p>
+<pre><code>cc_token_print: CC_TOKEN_RIGHT_PAREN ')'
+item-set[   4]:r[   5]----------------------
+[   0]:[ALIGNMENT_SPECIFIER -&gt; alignas ( TYPE_NAME ) .] (0)
+[   1]:[ALIGNMENT_SPECIFIER -&gt; alignas ( CONSTANT_EXPRESSION ) .] (0)
+[   2]:[TYPE_SPECIFIER_QUALIFIER -&gt; ALIGNMENT_SPECIFIER(4,0)(4,1) .] (0)
+. . .
+</code></pre>
+<hr>
+<h3 id="the-context-sensitivity">The context-sensitivity:</h3>
+<p>To determine exactly what the identifier <code>a</code> represents, the parser must
+consult the symbol-table as soon as it parses the identifier <code>a</code>.
+This also implies that the parser, as it parses the constructs, must keep the
+symbol-table up-to-date, so that relevant information is available to resolve
+any ambiguities.</p>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

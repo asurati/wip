@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Home on w-i-p</title>
+    <link>https://asurati.github.io/wip/</link>
+    <description>Recent content in Home on w-i-p</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 24 Mar 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>vulkan: Dissecting vkcube: Build</title>
+      <link>https://asurati.github.io/wip/post/2024/03/24/vulkan-dissecting-vkcube-build/</link>
+      <pubDate>Sun, 24 Mar 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2024/03/24/vulkan-dissecting-vkcube-build/</guid>
+      <description>This post lists the steps to build debug versions of mesa, libdrm and vkcube.&#xA;# Build debug versions of mesa, libdrm, and vulkan-tools # build-mesa-vt-dbg.sh # Run as: sh build-mesa-vt-dbg.sh set -e set -u DOWNLOAD=false SRC=/tmp/src BLD=/tmp/bld INSTALL=$HOME/tools/vt-dbg mkdir -p $SRC if [ &amp;quot;$DOWNLOAD&amp;quot; == &amp;quot;true&amp;quot; ]; then cd $SRC git clone --depth 1 https://github.com/KhronosGroup/Vulkan-Headers.git vh git clone --depth 1 https://github.com/KhronosGroup/Vulkan-Tools.git vt git clone --depth 1 https://github.com/zeux/volk.git volk git clone --depth 1 https://github.</description>
+    </item>
+    <item>
+      <title>cc: Postfix Conditional Expressions</title>
+      <link>https://asurati.github.io/wip/post/2023/12/19/cc-postfix-conditional-expressions/</link>
+      <pubDate>Tue, 19 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/12/19/cc-postfix-conditional-expressions/</guid>
+      <description>This post demonstrates the outline of a method to convert a conditional expression (possibly containing other such expressions within itself) into a postfix expression. It may be possible to optimize the method further.&#xA;The conversion helps with evaluating the constant-expression of the #if directive.&#xA;An expression such as a ? b : c is thought to be ending with a delimiter ¿ (the upside-down question mark), so that, in its postfix representation, the delimiter serves as the end-marker for the corresponding conditional expression.</description>
+    </item>
+    <item>
+      <title>ada: Building ada-mode for Emacs</title>
+      <link>https://asurati.github.io/wip/post/2023/12/05/ada-building-ada-mode-for-emacs/</link>
+      <pubDate>Tue, 05 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/12/05/ada-building-ada-mode-for-emacs/</guid>
+      <description>This post lists steps that build ada-mode for Emacs. The build depends on the GNAT FSF compiler being available on the build system. On Arch Linux, the compiler is available as the gcc-ada package.&#xA;# build-ada-mode.sh # Run as: sh build-ada-mode.sh set -e set -u DOWNLOAD=true SRC=/tmp/src TOOLS=$HOME/tools/ada LR1_SRC=ada_annex_p_lr1_parse_table.txt-8.1.0 LR1_TAB=ada_annex_p_lr1_re2c_parse_table.txt LR1_URL=https://download.savannah.nongnu.org/releases/ada-mode/$LR1_SRC SAVE=$PATH mkdir -p $SRC if [ &amp;quot;$DOWNLOAD&amp;quot; == &amp;quot;true&amp;quot; ]; then cd $SRC git clone --depth 1 https://github.com/AdaCore/gprbuild.git git clone --depth 1 https://github.</description>
+    </item>
+    <item>
+      <title>cc: Decoding Types</title>
+      <link>https://asurati.github.io/wip/post/2023/09/17/cc-decoding-types/</link>
+      <pubDate>Sun, 17 Sep 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/09/17/cc-decoding-types/</guid>
+      <description>Update #1 on: 23rd September, 2023.&#xA;This post demonstrates a method to decode the Declarations and TypeNames found in the C language, into a list of types, or a type-list. The method is similar to that used in converting expressions in infix notation into a corresponding postfix notation.&#xA;Rules of Precedence: The precedence of * is lower than that of [] or (). The latter two have the same precedence, but only [] can occur more than once at the same level without an intervening pair of parentheses, and they are scanned in a left-to-right manner (i.</description>
+    </item>
+    <item>
+      <title>cc: Context-Sensitive Parsing of alignas</title>
+      <link>https://asurati.github.io/wip/post/2023/09/14/cc-context-sensitive-parsing-of-alignas/</link>
+      <pubDate>Thu, 14 Sep 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/09/14/cc-context-sensitive-parsing-of-alignas/</guid>
+      <description>This post demonstrates the ambiguity that arises when parsing the C23 AlignmentSpecifier alignas, and the context-sensitive nature of the parsing required to correctly parse the specifier.&#xA;The ambiguity: The specifier is represented by the non-terminal AlignmentSpecifier in the C2x grammar:&#xA;AlignmentSpecifier: alignas ( TypeName ) AlignmentSpecifier: alignas ( ConstantExpression ) The ambiguity arises from the fact that both TypeName and ConstantExpression can derive an Identifier.&#xA;For e.g., in the declaration</description>
+    </item>
+    <item>
+      <title>cc: Generalized LR Parsing</title>
+      <link>https://asurati.github.io/wip/post/2023/08/26/cc-generalized-lr-parsing/</link>
+      <pubDate>Sat, 26 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/26/cc-generalized-lr-parsing/</guid>
+      <description>Update #1 on: 28th August, 2023.&#xA;Update #2 on: 13th September, 2023.&#xA;This post demonstrates the GLR parsing of a tiny C program, with the reader assuming the role of an LR(1) automaton/finite-state-machine.&#xA;The grammar constructs utilized here are adopted from the informal grammar description in the C2x standard, augmented with a production&#xA;TranslationObject -&amp;gt; TranslationUnit,&#xA;where TranslationObject is a non-terminal that does not occur on the RHS of any production.</description>
+    </item>
+    <item>
+      <title>CPP: Macro Replacement: Page 182, EXAMPLE 3</title>
+      <link>https://asurati.github.io/wip/post/2023/08/09/cpp-macro-replacement-page-182-example-3/</link>
+      <pubDate>Wed, 09 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/09/cpp-macro-replacement-page-182-example-3/</guid>
+      <description>This post explains the EXAMPLE 3 given on Page# 182 (page# that would be found printed on the page of a paper-copy, not the one displayed on a pdf reader application) of the working draft, dated April 1, 2023, of the C2X standard.&#xA;#define x 3 #define f(a) f(x * (a)) #undef x #define x 2 #define g f #define z z[0] #define h g(\~{ } #define m(a) a(w) #define w 0,1 #define t(a) a #define p() int #define q(x) x #define r(x,y) x ## y #define str(x) # x f(y+1) + f(f(z)) % t(t(g)(0) + t)(1); g(x+(3,4)-w) | h 5) &amp;amp; m (f)^m(m); p() i[q()] = { q(1), r(2,3), r(4,), r(,5), r(,) }; char c[2][6] = { str(hello), str() }; Expansion of f(y+1) The CPP pushes on the currently empty active-macro-stack-#0 an entry corresponding to the invocation f(y+1):</description>
+    </item>
+    <item>
+      <title>CPP: Macro Replacement: Page 179, EXAMPLE 1</title>
+      <link>https://asurati.github.io/wip/post/2023/08/08/cpp-macro-replacement-page-179-example-1/</link>
+      <pubDate>Tue, 08 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/08/cpp-macro-replacement-page-179-example-1/</guid>
+      <description>This post explains the EXAMPLE 1 given on Page# 179 (page# that would be found printed on the page of a paper-copy, not the one displayed on a pdf reader application) of the working draft, dated April 1, 2023, of the C2X standard.&#xA;Page 179, EXAMPLE 1 #define LPAREN() ( #define G(Q) 42 #define F(R, X, ...) __VA_OPT__(G R X) ) int x = F(LPAREN(), 0, &amp;lt;:-); // replaced by int x = 42; The tokens for the identifiers int and x do not correspond to the names of any macro.</description>
+    </item>
+    <item>
+      <title>CPP: Nested Replacement Ambiguity</title>
+      <link>https://asurati.github.io/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/</link>
+      <pubDate>Mon, 07 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/</guid>
+      <description>The C2X standard gives an example of a case where . . .&#xA;. . . it is not clear whether a replacement is nested or not.&#xA;Below is the example, in some detail, to expose the ambiguity.&#xA;6.10.4.4 Rescanning and further replacement The example source code is:&#xA;#define f(a) a*g #define g(a) f(a) f(2)(9) The tokens subjected to macro replacement are those that constitute the invocation line f(2)(9). The active-macro-stack is initially empty.</description>
+    </item>
+    <item>
+      <title>vc4: cube demo - &#39;from scratch&#39;</title>
+      <link>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates a partial recreation of the vkcube application, but directly on the vc4 GPU, without involving any of the software graphics APIs. It is a partial recreation, as the only behavior it demonstrates is a LunarG cube, rotating on its Y-axis. vkcube additionally supports speeding up or slowing down the spinning cube, and reversing the direction of the spin.</description>
+    </item>
+    <item>
+      <title>vc4: Winding Order</title>
+      <link>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</link>
+      <pubDate>Fri, 30 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates the effects of the triangle winding order on the render.&#xA;Preparation: RPi vc4 GPU, by default, assumes CCW winding order as denoting the front-face of a triangle. The GPU also assumes that the start of the frame-buffer holds the bottom-left pixel of the render. Effectively, the GPU adheres to a typical Cartesian coordinate system - the bottom-left corner is the origin, and the Y coordinate increases as it moves up.</description>
+    </item>
+    <item>
+      <title>vc4: T-format Textures</title>
+      <link>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</link>
+      <pubDate>Tue, 27 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post describes the layout of the vc4 T-format textures.&#xA;Preparation: RPi vc4 GPU consumes textures that are either in T-format, or in LT-format. Quoting the VideoCoreIV-AG100-R reference guide:&#xA;The hardware automatically determines type of image (T-format or LT-format) by looking at LOD dimensions. The hardware assumes a level is in T-format unless either the width or height for the level is less than one T-format tile.</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: Texture</title>
+      <link>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates utilizing an image as a texture, to add details to the surface of a square. The image is the one used here.&#xA;Preparation: The texture image is a JPEG of size 512x512. Extract the raw pixels in R8G8B8A8 format (equivalent to ABGR32, or 0xaabbggrr):&#xA;$ convert -size 512x512 -depth 8 texture.jpg RBGA:texture.bin $ xxd -i texture.</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: MSAA 8x</title>
+      <link>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates the HD7350 support for MSAA rendering, through the use of Color Mask and Fragment Mask, the former of which facilitates Fast Clear of a render surface, and the latter, allows drawing on compressed MSAA surfaces.&#xA;Color Mask: The Color Mask, or CMask, is a buffer, of size corresponding to the size of the target surface to which it is attached, which allows the GPU to mark the target surface as clear, without having to actually write the pixels on to the target surface.</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: A Triangle</title>
+      <link>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</link>
+      <pubDate>Tue, 31 May 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</guid>
+      <description>Update #1 on: 2nd June, 2022.&#xA;Update #2 on: 5th June, 2022.&#xA;Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates setting up a HD7350 pipeline to draw a triangle. The approach adopted here is that of choosing bare-metal programming over relying on established interfaces like the Linux DRM. That is not to say that Linux DRM cannot be used - it is possible to send compute or rendering commands to the GPU by directly interfacing with the DRM layer on Linux, or by moving up to an even higher abstraction provided by OpenGL/Vulkan APIs.</description>
+    </item>
+    <item>
+      <title>G73/NV4B demo: Fan Control</title>
+      <link>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</guid>
+      <description>This is a demonstration of controlling the stock fan. The demo is based on the DCB details pasted on the GPU Passthrough, and EDID access post.&#xA;Warning: Improperly programming a GPU, or a display, may cause harm to the devices.&#xA;The DCB: GPIO Assignment Table The offset to the GPIO Assignment table itself lies at offset 0xa from the start of the DCB.&#xA;The DCB starts at offset 0x8dd6 within my BIOS ROM.</description>
+    </item>
+    <item>
+      <title>G73/NV4B demo: GPU Passthrough, and EDID access</title>
+      <link>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</link>
+      <pubDate>Fri, 22 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</guid>
+      <description>This demo utilizes the VFIO feature of the Linux kernel to pass through a GeForce 7600 GT GPU to a guest VM running on the host. Then, the program running inside the guest VM configures a DDC (an I2C) bus on the GPU to access the EDID blocks of the attached display.&#xA;The details about parsing the Video BIOS, and about driving the DDC bus were found by reading the DCB Specification and, the source code for the nouveau driver.</description>
+    </item>
+    <item>
+      <title>Driving the HDMI Display Pipeline</title>
+      <link>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</guid>
+      <description>The demos have been relying on the firmware to setup the HDMI display pipeline and to provide them with a frame buffer to draw on.&#xA;The program found here attempts to take the control of the pipeline from the firmware, and run it on its own.&#xA;Because of the lack of documentation, the Linux vc4 driver was consulted to determine the registers to setup and the sequence of steps necessary, to disable and enable the pipeline.</description>
+    </item>
+    <item>
+      <title>Pixel Clock: PLLH_PIX</title>
+      <link>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</link>
+      <pubDate>Thu, 14 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</guid>
+      <description>This post investigates the programming of the HDMI pixel clock, performed by the RPi firmware to push the pixels into the HDMI encoder at that frequency.&#xA;Booting with the RPi firmware and the U-Boot, the actual resolution of the display is 1920x1080@60Hz. The resolution of the frame buffer might be lower - the HVS takes care of appropriately scaling and positioning the pixels.&#xA;Below is the Modeline details about the 1920x1080@60Hz resolution.</description>
+    </item>
+    <item>
+      <title>QPU Demo: Export HVS output to the system RAM</title>
+      <link>https://asurati.github.io/wip/post/2021/10/08/qpu-demo-export-hvs-output-to-the-system-ram/</link>
+      <pubDate>Fri, 08 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/08/qpu-demo-export-hvs-output-to-the-system-ram/</guid>
+      <description>This demo presents a way to configure HVS FIFO2/Channel2 and the Transposer (TXP) block to gather the scaled/converted/transformed scan-lines into a buffer inside the system RAM.&#xA;The HVS FIFO2 has a choice in how its output is consumed - it can be consumed either by PV1, or by the TXP block. The RPi firmware, by default, seems to disable the FIFO2 output (DSP3_MUX), so that it is not connected to PV1.</description>
+    </item>
+    <item>
+      <title>HVS and PV Settings</title>
+      <link>https://asurati.github.io/wip/post/2021/10/07/hvs-and-pv-settings/</link>
+      <pubDate>Thu, 07 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/07/hvs-and-pv-settings/</guid>
+      <description>This post investigates the contents of the registers belonging to the Hardware Video Scaler (HVS), and to the PixelValve (PV) devices.&#xA;When a request is made to the MailBox interface for a Frame Buffer with required properties, the RPi firmware programs the HVS and the PV in order to drive the display accordingly.&#xA;The demos have been requesting a resolution of 640x480, 32bpp, with a default pixel order of BGRA8888 (0xaarrggbb, or ARGB32).</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with MSAA 4x</title>
+      <link>https://asurati.github.io/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/</link>
+      <pubDate>Tue, 05 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/</guid>
+      <description>This demo works with the same triangle as seen in earlier demos; the demo utilizes the full 3D pipeline, employs Coordinate and Vertex shaders that are not merely pass-through but that perform the Perspective and ViewPort transformations (the Model and Camera/View transformations are assumed to have been performed outside), and enables 4x multi-sampling for a smoother display of the triangle.&#xA;The Coordinate and Vertex shaders perform the Matrix-Vector multiplication, in order to calculate the Clip Coordinates of each vertex, perform the Perspective divide to calculate the Normalized Device Coordinates, and perform the ViewPort Transformation to calculate the Screen Coordinates relative to the ViewPort Centre.</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with a GL Pass-Through Shader</title>
+      <link>https://asurati.github.io/wip/post/2021/10/04/qpu-demo-triangle-with-a-gl-pass-through-shader/</link>
+      <pubDate>Mon, 04 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/04/qpu-demo-triangle-with-a-gl-pass-through-shader/</guid>
+      <description>This demo results in the same output image as displayed in Triangle With NV Shader, but this time the full 3D pipeline is employed, with the exception that the Coordinate and the Vertex Shaders are mere pass-through shaders.&#xA;The Coordinate and the Vertex Shaders are each tasked with reading the input vertex attributes off the VPM (placed there by the Vertex Cache Manager), and writing shaded vertices in specific output formats back into the VPM.</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with NV Shader</title>
+      <link>https://asurati.github.io/wip/post/2021/10/02/qpu-demo-triangle-with-nv-shader/</link>
+      <pubDate>Sat, 02 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/02/qpu-demo-triangle-with-nv-shader/</guid>
+      <description>This demo presents a method of programming the GPU to display a triangle, with the interpolation of the colours at the pixels covered by it. The graphics concepts used here borrow heavily from those of OpenGL.&#xA;The GPU pipeline supports running in non-vertex-shading mode, or the NV mode. In this mode, pre-shaded vertices are presented to the pipeline. That is, the jobs of coordinate and vertex shader are done outside of the pipeline.</description>
+    </item>
+    <item>
+      <title>QPU Demo: Binary NOT operation</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-binary-not-operation/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-binary-not-operation/</guid>
+      <description>This demo builds upon QPU Demo: DMA Transfers, and presents a method of importing four 16-element vectors of integers from VPM to QPU registers, performing a binary NOT on the elements, and exporting the results back to the VPM.&#xA;Transfer Methods: For QPU to be able to access the vectors and perform any calculations on them, they must first be brought from the system RAM, where they usually resides, into the VPM.</description>
+    </item>
+    <item>
+      <title>QPU Demo: DMA Transfers</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-dma-transfers/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-dma-transfers/</guid>
+      <description>This demo presents a method of programming the V3D DMA controller to transfer four 16-element vectors of integers back and forth between the system RAM and the VPM.&#xA;It is natural for the QPU to work with 16-element vectors. To that end, its registers can accommodate 16 32-bit values (there are indeed a few exceptions, however).&#xA;In AMD terminology, a QPU can be said to process a wavefront made up of 16 workitems.</description>
+    </item>
+    <item>
+      <title>QPU Demo: Interrupting the host</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-interrupting-the-host/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-interrupting-the-host/</guid>
+      <description>This is the first in hopefully a few more articles demonstrating one of the ways in which the RPi&amp;rsquo;s VideoCoreIV (vc4) GPU can be programmed.&#xA;The 3D engine, V3D, is driven by the SIMD16 (physically SIMD4, but multiplexed over four consecutive clock cycles) processors known as QPUs, Quad Processing Units, or Quad Processors.&#xA;In February 2014, Broadcom released a specification detailing the vc4 V3D architecture. That document is the primary basis supporting the work demonstrated here.</description>
+    </item>
+    <item>
+      <title>About w-i-p</title>
+      <link>https://asurati.github.io/wip/about/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/about/</guid>
+      <description>Work-In-Progress.</description>
+    </item>
+  </channel>
+</rss>

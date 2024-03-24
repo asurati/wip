@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>CPP on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/cpp/</link>
+    <description>Recent content in CPP on w-i-p</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 09 Aug 2023 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/cpp/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>CPP: Macro Replacement: Page 182, EXAMPLE 3</title>
+      <link>https://asurati.github.io/wip/post/2023/08/09/cpp-macro-replacement-page-182-example-3/</link>
+      <pubDate>Wed, 09 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/09/cpp-macro-replacement-page-182-example-3/</guid>
+      <description>This post explains the EXAMPLE 3 given on Page# 182 (page# that would be found printed on the page of a paper-copy, not the one displayed on a pdf reader application) of the working draft, dated April 1, 2023, of the C2X standard.&#xA;#define x 3 #define f(a) f(x * (a)) #undef x #define x 2 #define g f #define z z[0] #define h g(\~{ } #define m(a) a(w) #define w 0,1 #define t(a) a #define p() int #define q(x) x #define r(x,y) x ## y #define str(x) # x f(y+1) + f(f(z)) % t(t(g)(0) + t)(1); g(x+(3,4)-w) | h 5) &amp;amp; m (f)^m(m); p() i[q()] = { q(1), r(2,3), r(4,), r(,5), r(,) }; char c[2][6] = { str(hello), str() }; Expansion of f(y+1) The CPP pushes on the currently empty active-macro-stack-#0 an entry corresponding to the invocation f(y+1):</description>
+    </item>
+    <item>
+      <title>CPP: Macro Replacement: Page 179, EXAMPLE 1</title>
+      <link>https://asurati.github.io/wip/post/2023/08/08/cpp-macro-replacement-page-179-example-1/</link>
+      <pubDate>Tue, 08 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/08/cpp-macro-replacement-page-179-example-1/</guid>
+      <description>This post explains the EXAMPLE 1 given on Page# 179 (page# that would be found printed on the page of a paper-copy, not the one displayed on a pdf reader application) of the working draft, dated April 1, 2023, of the C2X standard.&#xA;Page 179, EXAMPLE 1 #define LPAREN() ( #define G(Q) 42 #define F(R, X, ...) __VA_OPT__(G R X) ) int x = F(LPAREN(), 0, &amp;lt;:-); // replaced by int x = 42; The tokens for the identifiers int and x do not correspond to the names of any macro.</description>
+    </item>
+    <item>
+      <title>CPP: Nested Replacement Ambiguity</title>
+      <link>https://asurati.github.io/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/</link>
+      <pubDate>Mon, 07 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/</guid>
+      <description>The C2X standard gives an example of a case where . . .&#xA;. . . it is not clear whether a replacement is nested or not.&#xA;Below is the example, in some detail, to expose the ambiguity.&#xA;6.10.4.4 Rescanning and further replacement The example source code is:&#xA;#define f(a) a*g #define g(a) f(a) f(2)(9) The tokens subjected to macro replacement are those that constitute the invocation line f(2)(9). The active-macro-stack is initially empty.</description>
+    </item>
+  </channel>
+</rss>

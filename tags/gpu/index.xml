@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>GPU on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/gpu/</link>
+    <description>Recent content in GPU on w-i-p</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 04 Jul 2023 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/gpu/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>vc4: cube demo - &#39;from scratch&#39;</title>
+      <link>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates a partial recreation of the vkcube application, but directly on the vc4 GPU, without involving any of the software graphics APIs. It is a partial recreation, as the only behavior it demonstrates is a LunarG cube, rotating on its Y-axis. vkcube additionally supports speeding up or slowing down the spinning cube, and reversing the direction of the spin.</description>
+    </item>
+    <item>
+      <title>vc4: Winding Order</title>
+      <link>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</link>
+      <pubDate>Fri, 30 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates the effects of the triangle winding order on the render.&#xA;Preparation: RPi vc4 GPU, by default, assumes CCW winding order as denoting the front-face of a triangle. The GPU also assumes that the start of the frame-buffer holds the bottom-left pixel of the render. Effectively, the GPU adheres to a typical Cartesian coordinate system - the bottom-left corner is the origin, and the Y coordinate increases as it moves up.</description>
+    </item>
+    <item>
+      <title>vc4: T-format Textures</title>
+      <link>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</link>
+      <pubDate>Tue, 27 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post describes the layout of the vc4 T-format textures.&#xA;Preparation: RPi vc4 GPU consumes textures that are either in T-format, or in LT-format. Quoting the VideoCoreIV-AG100-R reference guide:&#xA;The hardware automatically determines type of image (T-format or LT-format) by looking at LOD dimensions. The hardware assumes a level is in T-format unless either the width or height for the level is less than one T-format tile.</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: Texture</title>
+      <link>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates utilizing an image as a texture, to add details to the surface of a square. The image is the one used here.&#xA;Preparation: The texture image is a JPEG of size 512x512. Extract the raw pixels in R8G8B8A8 format (equivalent to ABGR32, or 0xaabbggrr):&#xA;$ convert -size 512x512 -depth 8 texture.jpg RBGA:texture.bin $ xxd -i texture.</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: MSAA 8x</title>
+      <link>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</guid>
+      <description>Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates the HD7350 support for MSAA rendering, through the use of Color Mask and Fragment Mask, the former of which facilitates Fast Clear of a render surface, and the latter, allows drawing on compressed MSAA surfaces.&#xA;Color Mask: The Color Mask, or CMask, is a buffer, of size corresponding to the size of the target surface to which it is attached, which allows the GPU to mark the target surface as clear, without having to actually write the pixels on to the target surface.</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: A Triangle</title>
+      <link>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</link>
+      <pubDate>Tue, 31 May 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</guid>
+      <description>Update #1 on: 2nd June, 2022.&#xA;Update #2 on: 5th June, 2022.&#xA;Warning: Improperly programming a GPU, or a display, may damage the devices.&#xA;This post demonstrates setting up a HD7350 pipeline to draw a triangle. The approach adopted here is that of choosing bare-metal programming over relying on established interfaces like the Linux DRM. That is not to say that Linux DRM cannot be used - it is possible to send compute or rendering commands to the GPU by directly interfacing with the DRM layer on Linux, or by moving up to an even higher abstraction provided by OpenGL/Vulkan APIs.</description>
+    </item>
+    <item>
+      <title>G73/NV4B demo: Fan Control</title>
+      <link>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</guid>
+      <description>This is a demonstration of controlling the stock fan. The demo is based on the DCB details pasted on the GPU Passthrough, and EDID access post.&#xA;Warning: Improperly programming a GPU, or a display, may cause harm to the devices.&#xA;The DCB: GPIO Assignment Table The offset to the GPIO Assignment table itself lies at offset 0xa from the start of the DCB.&#xA;The DCB starts at offset 0x8dd6 within my BIOS ROM.</description>
+    </item>
+    <item>
+      <title>G73/NV4B demo: GPU Passthrough, and EDID access</title>
+      <link>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</link>
+      <pubDate>Fri, 22 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</guid>
+      <description>This demo utilizes the VFIO feature of the Linux kernel to pass through a GeForce 7600 GT GPU to a guest VM running on the host. Then, the program running inside the guest VM configures a DDC (an I2C) bus on the GPU to access the EDID blocks of the attached display.&#xA;The details about parsing the Video BIOS, and about driving the DDC bus were found by reading the DCB Specification and, the source code for the nouveau driver.</description>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>cc: Decoding Types | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">cc: Decoding Types</span></h1>
+
+<h2 class="date">2023/09/17</h2>
+</div>
+
+<main>
+<p><em><a href="#update1">Update #1</a> on: 23rd September, 2023.</em></p>
+<hr>
+<p>This post demonstrates a method to decode the <code>Declaration</code>s and
+<code>TypeName</code>s found in the C language, into a list of types, or a <code>type-list</code>.
+The method is similar to that
+used in converting expressions in infix notation into a corresponding
+<a href="https://en.wikipedia.org/wiki/Reverse_Polish_notation">postfix</a> notation.</p>
+<hr>
+<h3 id="rules-of-precedencea-nameprecedence_rulesa">Rules of Precedence:<a name="precedence_rules"></a></h3>
+<p>The precedence of <code>*</code> is lower than that of <code>[]</code> or <code>()</code>. The latter two have
+the same precedence, but only <code>[]</code> can occur more than once at the same level
+without an intervening pair of parentheses, and they are scanned in a
+left-to-right manner (i.e. <code>[]</code> is left-associative in relation to itself).</p>
+<p>Constructs such as <code>()[]</code>, <code>()()</code>, or <code>[]()</code>, though grammatically allowed,
+violate the semantic rules of the language.</p>
+<ul>
+<li><code>()[]</code> denotes a function that returns an array,</li>
+<li><code>()()</code> denotes a function that returns a function, and</li>
+<li><code>[]()</code> denotes an array of functions.</li>
+</ul>
+<p>All these three possibilities are semantically prohibited by the C standard.</p>
+<p>Note that the punctuator <code>*</code> is right-associative in
+relation to itself, and that the precedence-ordering punctuator <code>(</code> is
+also right-associative in relation to itself.</p>
+<hr>
+<h3 id="rules-for-extraneous-parenthesesa-nameextra_paren_rulesa">Rules for Extraneous Parentheses:<a name="extra_paren_rules"></a></h3>
+<p>A pair of parentheses that is used for precedence-ordering (and therefore is
+not considered an enclosure for the parameter-list of a function-type) is
+necessary only if both of the following conditions are satisfied:</p>
+<ol>
+<li>
+<p>A punctuator <code>*</code> follows the opening punctuator <code>(</code>.</p>
+</li>
+<li>
+<p>A punctuator <code>[</code> or <code>(</code> follows the closing punctuator <code>)</code>.</p>
+</li>
+</ol>
+<p>If at least one of the conditions is violated, the corresponding pair of
+precedence-ordering parentheses is extraneous and therefore not required.</p>
+<p>The stack-based method described here doesn&rsquo;t need to perform any special steps
+to handle extraneous pairs; the precedence rules and the algorithm handle them
+automatically.</p>
+<hr>
+<h3 id="rules-for-typedefa-nametypedef_rulesa">Rules for Typedef:<a name="typedef_rules"></a></h3>
+<p>Handling <code>typedef</code>&rsquo;d types is a straightforward splicing of type-lists. The
+<code>DeclarationSpecifiers</code> will house the <code>TypedefName</code> instead of a
+builtin-type. The type-list of final target (after recursively resolving
+inner <code>TypedefName</code>s) of the <code>TypedefName</code> is appended to the type-list of the
+<code>Declarator</code> to generate a complete type-list.</p>
+<hr>
+<h3 id="example-1a-nameexample1a">Example #1:<a name="example1"></a></h3>
+<p>This example is from the section <em>5.12 Complicated Declarations</em> in the
+2<sup>nd</sup> edition of the text
+<em>The C Programming Language</em> by Kernighan and Ritchie.</p>
+<pre><code class="language-c">    char (*(*x[3])())[5]
+</code></pre>
+<p>The <code>TypeSpecifier</code> <code>char</code> belongs to <code>DeclarationSpecifiers</code>. The rest of the
+declaration belongs to <code>Declarator</code>. The scanning of the <code>Declarator</code> is as
+described below.</p>
+<p>Create an <code>operator-stack</code> that is initially empty. Create an <code>output-list</code>,
+also initially empty, that will store the <code>Identifier</code> and punctuators that
+make up the <code>Declarator</code>. The <code>Identifier</code> of a <code>Declarator</code> will also be the
+first element in the output-list.</p>
+<p>When scanning a <code>Declarator</code>, any <code>(</code>, found in the input after the
+<code>Identifier</code> has been moved into the output-list, is considered as
+representing the beginning of the declaration of a function-type.
+The declarations of the parameters of a function-type are scanned recursively,
+in the same manner, on per-parameter private stacks.</p>
+<p>The starting state for this example:</p>
+<pre><code>             input: char (*(*x[3])())[5]
+       output-list:
+    operator-stack: (Note: The top of the stack is at its right-most end.)
+</code></pre>
+<hr>
+<h4 id="step-101">Step #1.01:</h4>
+<p>Move <code>char</code> into <code>DeclarationSpecifiers</code>. The rest of the input is a
+part of the <code>Declarator</code>.</p>
+<pre><code>             input: (*(*x[3])())[5]
+       output-list:
+    operator-stack:
+</code></pre>
+<hr>
+<h4 id="step-102">Step #1.02:</h4>
+<p>A punctuator <code>(</code> is found next. It is a precedence-ordering left-parenthesis,
+and not the one that begins the parameter-list of a function-type. The latter
+is found only after the <code>Identifier</code> has been moved into the output-list.
+Push the punctuator <code>(</code> on to the operator-stack.</p>
+<pre><code>             input: *(*x[3])())[5]
+       output-list:
+    operator-stack: (
+</code></pre>
+<hr>
+<h4 id="step-103">Step #1.03:</h4>
+<p>A punctuator <code>*</code> is found next. Since the top of the operator-stack contains
+a precedence-ordering punctuator <code>(</code>, the punctuator <code>*</code> must be directly
+pushed on to the operator-stack.</p>
+<pre><code>             input: (*x[3])())[5]
+       output-list:
+    operator-stack: ( *
+</code></pre>
+<hr>
+<h4 id="step-104">Step #1.04:</h4>
+<p>A punctuator <code>(</code> is found next. It too is a precedence-ordering punctuator <code>(</code>;
+therefore, push it on to the operator-stack.</p>
+<pre><code>             input: *x[3])())[5]
+       output-list:
+    operator-stack: ( * (
+</code></pre>
+<hr>
+<h4 id="step-105">Step #1.05:</h4>
+<p>A punctuator <code>*</code> is found next. Similar process as shown in Step #1.03.</p>
+<pre><code>             input: x[3])())[5]
+       output-list:
+    operator-stack: ( * ( *
+</code></pre>
+<hr>
+<h4 id="step-106">Step #1.06:</h4>
+<p>An <code>Identifier</code> <code>x</code> is found next. Place it at the beginning of the currently
+empty output-list. Any punctuator <code>(</code> found later will be treated
+as the beginning of the parameter-list of a function-type, and not as a
+precedence-ordering punctuator <code>(</code>.</p>
+<pre><code>             input: [3])())[5]
+       output-list: x
+    operator-stack: ( * ( *
+</code></pre>
+<hr>
+<h4 id="step-107">Step #1.07:</h4>
+<p>A punctuator <code>[</code> is found next. It&rsquo;s precedence is higher than that of the
+punctuator <code>*</code> found on the top of the operator-stack.
+Since the punctuator <code>[</code> begins an array-type, scan the constructs between it
+and the corresponding closing punctuator <code>]</code>; in this example it is just a
+number <code>3</code>. Hence, this declares an <code>array[3]</code>.</p>
+<pre><code>             input: )())[5]
+       output-list: x array[3]
+    operator-stack: ( * ( *
+</code></pre>
+<hr>
+<h4 id="step-108">Step #1.08:</h4>
+<p>A punctuator <code>)</code> is found next. This signals that one must pop the
+operator-stack and move the elements found on it into the output-list, until a
+<code>(</code> is popped. Then, both the punctuators, <code>(</code> and <code>)</code>, are discarded.</p>
+<pre><code>             input: ())[5]
+       output-list: x array[3] *
+    operator-stack: ( *
+</code></pre>
+<hr>
+<h4 id="step-109">Step #1.09:</h4>
+<p>A punctuator <code>(</code> is found next. Since the <code>Identifier</code> of the <code>Declarator</code>
+has already been moved into the output-list (i.e. the output-list is not empty;
+the <code>Identifier</code> will always be the first entry on it), the punctuator
+<code>(</code> found is treated as the beginning of the parameter-list of a function-type.
+Scan the parameters recursively, and consume the closing <code>)</code>.</p>
+<pre><code>             input: )[5]
+       output-list: x array[3] * func()
+    operator-stack: ( *
+</code></pre>
+<hr>
+<h4 id="step-110">Step #1.10:</h4>
+<p>A punctuator <code>)</code> is found next. This signals that one must pop the
+operator-stack and move the elements found on it into the output-list, until a
+<code>(</code> is popped. Then, both the punctuators, <code>(</code> and <code>)</code>, are discarded.</p>
+<pre><code>             input: [5]
+       output-list: x array[3] * func() *
+    operator-stack:
+</code></pre>
+<hr>
+<h4 id="step-111">Step #1.11:</h4>
+<p>A punctuator <code>[</code> is found next. The operator-stack is empty; there is no need
+for precedence comparisons. Since the punctuator <code>[</code> begins an array-type,
+scan the constructs between it and the corresponding closing punctuator <code>]</code>;
+in this example it is just a number <code>5</code>. Hence, this declares an <code>array[5]</code>.</p>
+<pre><code>             input:
+       output-list: x array[3] * func() * array[5]
+    operator-stack:
+</code></pre>
+<hr>
+<h4 id="step-112">Step #1.12:</h4>
+<p>The input is now exhausted. The operator-stack too is empty. Thus, the scan is
+grammatically correct, though the output-list may have to be semantically
+verified for correctness, to flag
+<a href="#precedence_rules">semantically invalid constructs</a>.</p>
+<p>The given declaration can be described by moving into the output-list from its
+left-end to its right-end, and then appending the type (<code>char</code> in
+this example) collected in the <code>DeclarationSpecifiers</code>.</p>
+<p>Note that
+<code>DeclarationSpecifiers</code> also collect <code>TypeQualifiers</code> (this example has none),
+such as <code>const</code>, <code>restrict</code>, <code>volatile</code>, and <code>_Atomic</code>, that further qualify
+the <code>TypeSpecifier</code> (<code>char</code> in this example).</p>
+<p>The output-list is:</p>
+<pre><code>   output-list: x array[3] * func() * array[5]
+</code></pre>
+<p>The description is</p>
+<pre><code>    x is ...
+    an array[3] of ...
+    a pointer to ...
+    a function that takes no parameters and returns ...
+    a pointer to ...
+    an array[5] of ...
+    a char.
+</code></pre>
+<hr>
+<h3 id="example-2">Example #2:</h3>
+<p>This example demonstrates the fact that the method can deal with the extraneous
+pair of parentheses.</p>
+<p>The rules referred to in the descriptions below are the rules <code>(1)</code> and <code>(2)</code>
+found in the
+<a href="#extra_paren_rules">Rule for Extraneous Parentheses</a> section.</p>
+<p>Each pair found extraneous is removed, without changing the meaning of the
+<code>Declaration</code>. The below steps demonstrate a manual method of removing
+extraneous pairs, and arriving at a minimal representation of a type.</p>
+<pre><code>    int (*((((x)[3]))));
+             ^ ^
+             | |
+             +-+-------- violates rule (1), so not necessary
+
+    int (*(((x[3]))));
+</code></pre>
+<pre><code>    int (*(((x[3]))));
+            ^    ^
+            |    |
+            +----+---- violates rules (1) and (2), so not necessary
+
+    int (*((x[3])));
+</code></pre>
+<pre><code>    int (*((x[3])));
+           ^    ^
+           |    |
+           +----+--- violates rules (1) and (2), so not necessary
+
+    int (*(x[3]));
+</code></pre>
+<pre><code>    int (*(x[3]));
+          ^    ^
+          |    |
+          +----+--- violates rules (1) and (2), so not necessary
+
+    int (*x[3]);
+</code></pre>
+<pre><code>    int (*x[3]);
+        ^     ^
+        |     |
+        +-----+- violates rule (2), so not necessary
+
+    int *x[3];
+</code></pre>
+<p>The <code>Declaration</code> <code>int (*((((x)[3]))));</code> therefore is:</p>
+<pre><code>    x is ...
+    an array[3] of ...
+    a pointer to ...
+    an int.
+</code></pre>
+<hr>
+<p>One can also confirm that the description is correct, by consulting the AST
+produced by <code>clang</code>:</p>
+<pre><code class="language-bash">    $ # On bash shell
+
+    $ cat 1.c
+    $ int (*((((x)[3]))));
+
+    $ clang -E -Xclang -ast-dump -fno-color-diagnostics 1.c
+    TranslationUnitDecl 0x56313f5e0938 &lt;&lt;invalid sloc&gt;&gt; &lt;invalid sloc&gt;
+    | . . .
+    | . . .
+    `-VarDecl 0x56313f63f738 &lt;&lt;stdin&gt;:1:1, col:19&gt; col:11 x 'int (*[3])':'int (*[3])'
+</code></pre>
+<p>The <code>TypeName</code> <code>int (*[3])</code> has the same type as that in the <code>Declaration</code>
+<code>int (*x[3])</code>. From the rules about extraneous parentheses, the pair isn&rsquo;t
+required, and so the type is the same as <code>int *[3]</code>.</p>
+<p>For some reason, <code>clang</code> doesn&rsquo;t remove the pair. The type shown by <code>clang</code>,
+although correct, isn&rsquo;t in its minimal possible representation.</p>
+<p>As demonstrated below, <code>gcc</code> doesn&rsquo;t suffer from this problem, as it displays
+the type not in the form of a string, as <code>clang</code> does, but in the form of an
+hierarchy of the AST nodes - that hierarchy records the ordering of the types.
+The type-list, that is built by the method described in this post, is exactly
+equivalent to a single path in <code>gcc</code>&rsquo;s type-hierarchy.</p>
+<hr>
+<p>One can also confirm that the description is correct, by consulting the AST
+produced by <code>gcc</code>:</p>
+<pre><code class="language-bash">    $ # On bash shell
+
+    $ cat 1.c
+    int main()
+    {
+            int (*((((x)[3]))));
+    }
+
+    $ cc -fdump-tree-original-raw 1.c -c
+    $ cat 1.c.005t.original
+
+    @5      var_decl         name: @9       type: @10      scpe: @11
+                             srcp: 1.c:3                   size: @12
+                             algn: 64       used: 0
+    @9      identifier_node  strg: x        lngt: 1
+
+    # The type of the variable &quot;x&quot; is given in the tree-node @10
+    @10     array_type       size: @12      algn: 64       elts: @17
+                             domn: @18
+
+    # Thus, &quot;x&quot; is of an array-type. The total size of the array is given
+    # by the tree-node @12, which is an integer-constant 192 (bits). The
+    # total size of the array is therefore 24 bytes.
+    @12     integer_cst      type: @21     int: 192
+
+    # Each element of the array &quot;x&quot; is of the type given by the tree-node @17.
+    @17     pointer_type     size: @26      algn: 64       ptd : @13
+
+    # Thus, each element of array &quot;x&quot; is a pointer to some type. The size
+    # of the pointer is given by the tree-node @26; it is 64 bits = 8 bytes.
+    # Thus the array &quot;x&quot; has dimensions 24/8 = 3, or array[3].
+    @26     integer_cst      type: @21     int: 64
+
+    # The pointed-to type is given by tree-node @13.
+    @13     integer_type     name: @22      size: @23      algn: 32
+                             prec: 32       sign: signed   min : @24
+                             max : @25
+    @22     type_decl        name: @35      type: @13
+    @35     identifier_node  strg: int      lngt: 3
+
+    # Thus, &quot;x&quot; is an array[3] of a pointer to an int, or as can be declared,
+    # 'int *x[3]'.
+</code></pre>
+<hr>
+<p>The stack-based method, described in <a href="#example1">Example #1</a>, does not have to
+carry out any special steps to handle extraneous parentheses, as
+demonstrated below.</p>
+<p>The initial state for this example is:</p>
+<pre><code>             input: int (*((((x)[3]))))
+       output-list:
+    operator-stack:
+</code></pre>
+<p>The <code>TypeSpecifier</code> <code>int</code> is a part of the <code>DeclarationSpecifiers</code> and not
+of the <code>Declarator</code> that follows. Scanning the <code>Declarator</code> as shown below.</p>
+<pre><code>             input: (*((((x)[3]))))
+       output-list:
+    operator-stack:
+</code></pre>
+<pre><code>             input: *((((x)[3]))))
+       output-list:
+    operator-stack: (
+</code></pre>
+<pre><code>             input: ((((x)[3]))))
+       output-list:
+    operator-stack: ( *
+</code></pre>
+<pre><code>             input: (((x)[3]))))
+       output-list:
+    operator-stack: ( * (
+</code></pre>
+<pre><code>             input: ((x)[3]))))
+       output-list:
+    operator-stack: ( * ( (
+</code></pre>
+<pre><code>             input: (x)[3]))))
+       output-list:
+    operator-stack: ( * ( ( (
+</code></pre>
+<pre><code>             input: x)[3]))))
+       output-list:
+    operator-stack: ( * ( ( ( (
+</code></pre>
+<pre><code>             input: )[3]))))
+       output-list: x
+    operator-stack: ( * ( ( ( (
+</code></pre>
+<pre><code>             input: [3]))))
+       output-list: x
+    operator-stack: ( * ( ( (
+</code></pre>
+<pre><code>             input: ))))
+       output-list: x array[3]
+    operator-stack: ( * ( ( (
+</code></pre>
+<pre><code>             input: )))
+       output-list: x array[3]
+    operator-stack: ( * ( (
+</code></pre>
+<pre><code>             input: ))
+       output-list: x array[3]
+    operator-stack: ( * (
+</code></pre>
+<pre><code>             input: )
+       output-list: x array[3]
+    operator-stack: ( *
+</code></pre>
+<pre><code>             input:
+       output-list: x array[3] *
+    operator-stack:
+</code></pre>
+<p>Thus, the description is</p>
+<pre><code>    x is ...
+    an array[3] of ...
+    a pointer to ...
+    an int.
+</code></pre>
+<p>which is the same as that for <code>int *x[3]</code>.</p>
+<hr>
+<h3 id="example-3">Example #3:</h3>
+<p>This example demonstrates how the precedence-ordering parentheses, that are
+not extraneous, are handled by the method.</p>
+<p>The initial state for the example is:</p>
+<pre><code>             input: int (*x)[3]
+       output-list:
+    operator-stack:
+</code></pre>
+<p>The <code>TypeSpecifier</code> <code>int</code> is a part of the <code>DeclarationSpecifiers</code> and not
+of the <code>Declarator</code> that follows. Scanning the <code>Declarator</code> as shown below.</p>
+<pre><code>             input: (*x)[3]
+       output-list:
+    operator-stack:
+</code></pre>
+<pre><code>             input: *x)[3]
+       output-list:
+    operator-stack: (
+</code></pre>
+<pre><code>             input: x)[3]
+       output-list:
+    operator-stack: ( *
+</code></pre>
+<pre><code>             input: )[3]
+       output-list: x
+    operator-stack: ( *
+</code></pre>
+<pre><code>             input: [3]
+       output-list: x *
+    operator-stack:
+</code></pre>
+<pre><code>             input:
+       output-list: x * array[3]
+    operator-stack:
+</code></pre>
+<p>Thus, the description is</p>
+<pre><code>    x is ...
+    a pointer to ...
+    an array[3] of ...
+    an int.
+</code></pre>
+<hr>
+<h3 id="handling-typenames">Handling TypeNames:</h3>
+<p>A <code>TypeName</code> is similar to a <code>Declaration</code> that is devoid of its <code>Identifier</code>.</p>
+<p>Since an <code>Identifier</code> is not present in a <code>TypeName</code>, the rules for building a
+type-list for it have to be adjusted to handle its absence.</p>
+<p>Simply removing an <code>Identifier</code> from a <code>Declaration</code> doesn&rsquo;t always create
+a <code>TypeName</code> that corresponds to the type found in that <code>Declaration</code>. That is,
+<code>AbstractDeclarator</code> and <code>Declarator</code> are not exactly the same constructs.</p>
+<hr>
+<h3 id="rules-for-typenamesa-nametypename_rulesa">Rules for TypeNames:<a name="typename_rules"></a></h3>
+<p>An empty-pair of parentheses is always assumed to represent an empty
+parameter-list; it never represents a (supposed) <code>Identifier</code> that is
+surrounded by the pair.</p>
+<p>The location of the <code>Identifier</code> can be decided by following these rules
+for an <code>AbstractDeclarator</code>.</p>
+<ol>
+<li>If the location of the identifier has not yet been found (i.e. the
+output-list is empty), and if an array-type (i.e. <code>ArrayAbstractDeclarator</code>)
+is found, then the location of the <code>Identifier</code> is to the immediate left of
+the corresponding opening punctuator <code>[</code>.</li>
+<li>If the location of the identifier has not yet been found (i.e. the
+output-list is empty), and if a punctuator <code>)</code> is found, then there are two
+separate situations:
+<ol>
+<li>If a punctuator <code>*</code> follows the opening punctuator <code>(</code>, then the
+location of the <code>Identifier</code> is to the immediate left of the punctuator
+<code>)</code>.</li>
+<li>Else, the location of the <code>Identifier</code> is to the immediate left of the
+opening punctuator <code>(</code>.</li>
+</ol>
+</li>
+</ol>
+<hr>
+<h3 id="example-4a-nameexample4a">Example #4:<a name="example4"></a></h3>
+<p>From <a href="#example3">Example #3</a>, the <code>Declaration</code> <code>int (*((((x)[3]))))</code> is
+equivalent to <code>int *x[3]</code>.</p>
+<p>Removing <code>x</code> from the <code>Declaration</code> <code>int *x[3]</code> results in a <code>TypeName</code>
+<code>int *[3]</code> that is exactly the same type as that of <code>x</code>.</p>
+<p>The initial state for the example is:</p>
+<pre><code>             input: int *[3]
+       output-list:
+    operator-stack:
+</code></pre>
+<p>The <code>TypeSpecifier</code> <code>int</code> is a part of the <code>SpecifierQualifierList</code> and not
+of the <code>AbstractDeclarator</code> that follows. Scanning the <code>AbstractDeclarator</code>
+as shown below.</p>
+<pre><code>             input: *[3]
+       output-list:
+    operator-stack:
+</code></pre>
+<pre><code>             input: [3]
+       output-list:
+    operator-stack: *
+</code></pre>
+<p>A punctuator <code>[</code> is found next in the input. Its precedence is higher than that
+of the punctuator <code>*</code> found on the top of the operator-stack. Hence, the
+processing of the punctuator <code>[</code> takes priority over that of the punctuator
+<code>*</code>.</p>
+<p>The output-list is empty; hence, the rule <code>(1)</code> of the
+<a href="#typename_rules">Rules for TypeNames</a> applies.</p>
+<p>The position of the <code>Identifier</code> is shown here in <code>int *x[3]</code> through
+the use of the name <code>x</code>.</p>
+<p>An <code>Identifier</code> <code>x</code> is placed at the start of the currently empty output-list,
+as a place-holder.</p>
+<p>Since the location of the <code>Identifier</code> is now available, the rules now are the
+same as they were when scanning a <code>Declaration</code>.</p>
+<pre><code>             input: [3]
+       output-list: x
+    operator-stack: *
+</code></pre>
+<pre><code>             input:
+       output-list: x array[3]
+    operator-stack: *
+</code></pre>
+<p>Now empty the operator-stack:</p>
+<pre><code>             input:
+       output-list: x array[3] *
+    operator-stack:
+</code></pre>
+<p>As can be seen, this <code>Declaration</code> is the same as that of a variable that is
+<code>an array[3] of a pointer to an int</code>.</p>
+<hr>
+<h3 id="example-5">Example #5:</h3>
+<p>From <a href="#example3">Example #3</a>, and <a href="#example4">Example #4</a>,
+the <code>Declaration</code> <code>int (*((((x)[3]))))</code> is equivalent to <code>int *x[3]</code>.</p>
+<p>But, removing <code>x</code> from the <code>Declaration</code> <code>int (*((((x)[3]))))</code> results in a
+<code>TypeName</code> <code>int (*(((()[3]))))</code> that is semantically invalid, and therefore,
+not equivalent to <code>int *[3]</code>, as shown below.</p>
+<p>The initial state for the example is:</p>
+<pre><code>             input: int (*(((()[3]))))
+       output-list:
+    operator-stack:
+</code></pre>
+<p>The <code>TypeSpecifier</code> <code>int</code> is a part of the <code>SpecifierQualifierList</code> and not
+of the <code>AbstractDeclarator</code> that follows. Scanning the <code>AbstractDeclarator</code>
+as shown below.</p>
+<pre><code>             input: (*(((()[3]))))
+       output-list:
+    operator-stack:
+</code></pre>
+<pre><code>             input: *(((()[3]))))
+       output-list:
+    operator-stack: (
+</code></pre>
+<pre><code>             input: (((()[3]))))
+       output-list:
+    operator-stack: ( *
+</code></pre>
+<pre><code>             input: ((()[3]))))
+       output-list:
+    operator-stack: ( * (
+</code></pre>
+<pre><code>             input: (()[3]))))
+       output-list:
+    operator-stack: ( * ( (
+</code></pre>
+<pre><code>             input: ()[3]))))
+       output-list:
+    operator-stack: ( * ( ( (
+</code></pre>
+<pre><code>             input: )[3]))))
+       output-list:
+    operator-stack: ( * ( ( ( (
+</code></pre>
+<p>A punctuator <code>)</code> is found next in the input.
+Before the punctuator is removed from the input-stream, one can see that
+the output-list is empty, and the corresponding opening punctuator <code>(</code> is
+not followed by the punctuator <code>*</code>.</p>
+<p>Hence, the rule <code>(2.2)</code> of the <a href="#typename_rules">Rules for TypeNames</a> applies.</p>
+<p>The position of the <code>Identifier</code> is shown here in <code>int (*(((x()[3]))))</code> through
+the use of the name <code>x</code>. As is evident, this <code>Declaration</code> is not same as
+<code>int (*((((x)[3]))))</code>.</p>
+<p>The rule says that the position of the <code>Identifier</code> is to the immediate left
+of the opening punctuator <code>(</code>. To apply this rule, pop the elements from
+the operator-stack and place them back on to the head of the input. Stop
+once the opening punctuator <code>(</code> is moved back into the input. Then, place <code>x</code>
+at the start of the currently empty output-list as a place-holder for the
+omitted <code>Identifier</code>. The current state then is as shown below:</p>
+<pre><code>             input: ()[3]))))
+       output-list: x
+    operator-stack: ( * ( ( (
+</code></pre>
+<p>Since the location of the <code>Identifier</code> is now available, the rules now are the
+same as they were when scanning a <code>Declaration</code>.</p>
+<pre><code>             input: [3]))))
+       output-list: x func()
+    operator-stack: ( * ( ( (
+</code></pre>
+<pre><code>             input: ))))
+       output-list: x func() array[3]
+    operator-stack: ( * ( ( (
+</code></pre>
+<p>Here, the partial type can be described as:</p>
+<pre><code>   x is a function that takes no parameters and returns ...
+   an array[3] of ...
+</code></pre>
+<p>The fact, that the given <code>TypeName</code> turns out (partially) to be of a
+function that returns an array, violates one of the semantic rules mentioned in
+<a href="#precedence_rules">Rules of Precedence</a>. A function can never return an
+array. The scanning of the <code>TypeName</code> can stop here, but let us continue,
+since <code>clang</code>, as shown below, also informs about the type of the array that
+the function returns.</p>
+<pre><code>             input: )))
+       output-list: x func() array[3]
+    operator-stack: ( * ( (
+</code></pre>
+<pre><code>             input: ))
+       output-list: x func() array[3]
+    operator-stack: ( * (
+</code></pre>
+<pre><code>             input: )
+       output-list: x func() array[3]
+    operator-stack: ( *
+</code></pre>
+<pre><code>             input:
+       output-list: x func() array[3] *
+    operator-stack:
+</code></pre>
+<p>The description of the type is:</p>
+<pre><code>    x is ...
+    a function that takes no parameters and returns ...
+    an array[3] of ...
+    a pointer to ...
+    an int
+</code></pre>
+<p>The output from <code>clang</code>, shown below, notes that the function returns
+<code>an array[3] of a pointer to an int</code>. The <code>gcc</code> compiler decides to not show
+the exact type the function returns, perhaps because a function, returning an
+array (of <em>any</em> legal/illegal type), is in violation of the standard.</p>
+<hr>
+<p>The outputs from <code>gcc</code> and <code>clang</code>:</p>
+<pre><code class="language-bash">    $ cat 1.c
+    int main(void)
+    {
+            return sizeof(int (*(((()[3])))));
+    }
+
+
+    $ cc 1.c
+    1.c: In function ‘main’:
+    1.c:3:9: error: type name declared as function returning an array
+        3 |         return sizeof(int (*(((()[3])))));
+          |         ^~~~~~
+
+
+    $ clang 1.c
+    1.c:3:25: error: function cannot return array type 'int (*[3])'
+        3 |         return sizeof(int (*(((()[3])))));
+          |                                ^
+    1 error generated.
+</code></pre>
+<hr>
+<h3 id="example-6a-nameexample6a">Example #6:<a name="example6"></a></h3>
+<p>The initial state for the example is:</p>
+<pre><code>             input: int (int)
+       output-list:
+    operator-stack:
+</code></pre>
+<p>The <code>TypeSpecifier</code> <code>int</code> is a part of the <code>SpecifierQualifierList</code> and not
+of the <code>AbstractDeclarator</code> that follows. Scanning the <code>AbstractDeclarator</code>
+as shown below.</p>
+<pre><code>             input: (int)
+       output-list:
+    operator-stack:
+</code></pre>
+<pre><code>             input: int)
+       output-list:
+    operator-stack: (
+</code></pre>
+<pre><code>             input: )
+       output-list:
+    operator-stack: ( int
+</code></pre>
+<p>A punctuator <code>)</code> is found next in the input. Before the punctuator is removed
+from the input-stream, one can see that the output-list is empty, and the
+corresponding opening punctuator <code>(</code> is not followed by the punctuator <code>*</code>.</p>
+<p>Hence, the rule <code>(2.2)</code> of the <a href="#typename_rules">Rules for TypeNames</a> applies.</p>
+<p>The position of the <code>Identifier</code> is shown here in <code>int x(int)</code> through
+the use of the name <code>x</code>.</p>
+<pre><code>             input: (int)
+       output-list: x
+    operator-stack:
+</code></pre>
+<p>Since the location of the <code>Identifier</code> is now available, the rules now are the
+same as they were when scanning a <code>Declaration</code>.</p>
+<pre><code>             input:
+       output-list: x func(int)
+    operator-stack:
+</code></pre>
+<p>The description of the type is:</p>
+<pre><code>    x is ...
+    a function that takes one parameter of type int and returns ...
+    an int
+</code></pre>
+<hr>
+<h3 id="example-7">Example #7:</h3>
+<p>The type of the <code>Declaration</code> <code>char (*(*x[3])())[5]</code> is same as the <code>TypeName</code>
+<code>char (*(*[3])()))[5]</code> obtained by removing the <code>Identifier</code> <code>x</code>.</p>
+<p>Within the <code>TypeName</code>, the location of the <code>Identifier</code> is provided by the
+application of the rule <code>(1)</code> of the <a href="#typename_rules">Rules for TypeNames</a>.
+It is the same as the location of <code>x</code> in the <code>Declaration</code>.</p>
+<hr>
+<h3 id="example-8">Example #8:</h3>
+<p>The type of the <code>Declaration</code> <code>int (*x)[3]</code> is same as the <code>TypeName</code>
+<code>int (*)[3]</code> obtained by removing the <code>Identifier</code> <code>x</code>.</p>
+<p>Within the <code>TypeName</code>, the location of the <code>Identifier</code> is provided by the
+application of the rule <code>(2.1)</code> of the <a href="#typename_rules">Rules for TypeNames</a>.
+It is the same as the location of <code>x</code> in the <code>Declaration</code>.</p>
+<hr>
+<h3 id="update-1-a-nameupdate1a"><strong>Update #1:</strong> <a name="update1"></a></h3>
+<p>Fixed <a href="#typename_rules">Rules for TypeNames</a> to add support for
+<code>FunctionAbstractDeclarator</code>. Added <a href="#example6">Example #6</a> that is a
+declaration of a function.</p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+
