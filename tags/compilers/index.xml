@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Compilers on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/compilers/</link>
+    <description>Recent content in Compilers on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 19 Dec 2023 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/compilers/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>cc: Postfix Conditional Expressions</title>
+      <link>https://asurati.github.io/wip/post/2023/12/19/cc-postfix-conditional-expressions/</link>
+      <pubDate>Tue, 19 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/12/19/cc-postfix-conditional-expressions/</guid>
+      <description>&lt;p&gt;This post demonstrates the outline of a method to convert a conditional&#xA;expression (possibly containing other such expressions within itself) into a&#xA;postfix expression. It may be possible to optimize the method further.&lt;/p&gt;&#xA;&lt;p&gt;The conversion helps with evaluating the &lt;code&gt;constant-expression&lt;/code&gt; of the &lt;code&gt;#if&lt;/code&gt;&#xA;directive.&lt;/p&gt;&#xA;&lt;p&gt;An expression such as &lt;code&gt;a ? b : c&lt;/code&gt; is thought to be ending with a delimiter&#xA;&lt;code&gt;¿&lt;/code&gt; (the upside-down question mark), so that, in its postfix representation,&#xA;the delimiter serves as the end-marker for the corresponding conditional&#xA;expression.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>cc: Decoding Types</title>
+      <link>https://asurati.github.io/wip/post/2023/09/17/cc-decoding-types/</link>
+      <pubDate>Sun, 17 Sep 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/09/17/cc-decoding-types/</guid>
+      <description>&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update1&#34;&gt;Update #1&lt;/a&gt; on: 23rd September, 2023.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;This post demonstrates a method to decode the &lt;code&gt;Declaration&lt;/code&gt;s and&#xA;&lt;code&gt;TypeName&lt;/code&gt;s found in the C language, into a list of types, or a &lt;code&gt;type-list&lt;/code&gt;.&#xA;The method is similar to that&#xA;used in converting expressions in infix notation into a corresponding&#xA;&lt;a href=&#34;https://en.wikipedia.org/wiki/Reverse_Polish_notation&#34;&gt;postfix&lt;/a&gt; notation.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;rules-of-precedencea-nameprecedence_rulesa&#34;&gt;Rules of Precedence:&lt;a name=&#34;precedence_rules&#34;&gt;&lt;/a&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The precedence of &lt;code&gt;*&lt;/code&gt; is lower than that of &lt;code&gt;[]&lt;/code&gt; or &lt;code&gt;()&lt;/code&gt;. The latter two have&#xA;the same precedence, but only &lt;code&gt;[]&lt;/code&gt; can occur more than once at the same level&#xA;without an intervening pair of parentheses, and they are scanned in a&#xA;left-to-right manner (i.e. &lt;code&gt;[]&lt;/code&gt; is left-associative in relation to itself).&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>cc: Context-Sensitive Parsing of alignas</title>
+      <link>https://asurati.github.io/wip/post/2023/09/14/cc-context-sensitive-parsing-of-alignas/</link>
+      <pubDate>Thu, 14 Sep 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/09/14/cc-context-sensitive-parsing-of-alignas/</guid>
+      <description>&lt;p&gt;This post demonstrates the ambiguity that arises when parsing the C23&#xA;&lt;code&gt;AlignmentSpecifier&lt;/code&gt; &lt;a href=&#34;https://en.cppreference.com/w/c/language/_Alignas&#34;&gt;&lt;code&gt;alignas&lt;/code&gt;&lt;/a&gt;,&#xA;and the context-sensitive nature of the parsing required to correctly&#xA;parse the specifier.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;the-ambiguity&#34;&gt;The ambiguity:&lt;/h3&gt;&#xA;&lt;p&gt;The specifier is represented by the non-terminal &lt;code&gt;AlignmentSpecifier&lt;/code&gt;&#xA;in the C2x &lt;a href=&#34;https://github.com/asurati/x24/blob/main/grammar.txt&#34;&gt;grammar&lt;/a&gt;:&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code&gt;    AlignmentSpecifier: alignas ( TypeName )&#xA;    AlignmentSpecifier: alignas ( ConstantExpression )&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;The ambiguity arises from the fact that both &lt;code&gt;TypeName&lt;/code&gt; and&#xA;&lt;code&gt;ConstantExpression&lt;/code&gt; can derive an &lt;code&gt;Identifier&lt;/code&gt;.&lt;/p&gt;&#xA;&lt;p&gt;For e.g., in the declaration&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>cc: Generalized LR Parsing</title>
+      <link>https://asurati.github.io/wip/post/2023/08/26/cc-generalized-lr-parsing/</link>
+      <pubDate>Sat, 26 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/26/cc-generalized-lr-parsing/</guid>
+      <description>&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update1&#34;&gt;Update #1&lt;/a&gt; on: 28th August, 2023.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update2&#34;&gt;Update #2&lt;/a&gt; on: 13th September, 2023.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;This post demonstrates the &lt;a href=&#34;https://en.wikipedia.org/wiki/GLR_parser&#34;&gt;GLR&lt;/a&gt;&#xA;parsing of a tiny C program, with the reader assuming the role of an&#xA;&lt;a href=&#34;https://en.wikipedia.org/wiki/Canonical_LR_parser&#34;&gt;LR(1)&lt;/a&gt;&#xA;automaton/finite-state-machine.&lt;/p&gt;&#xA;&lt;p&gt;The grammar constructs utilized here are adopted from the informal grammar&#xA;description in the C2x standard, augmented with a production&lt;/p&gt;&#xA;&lt;p&gt;&lt;code&gt;TranslationObject -&amp;gt; TranslationUnit&lt;/code&gt;,&lt;/p&gt;&#xA;&lt;p&gt;where &lt;code&gt;TranslationObject&lt;/code&gt; is a&#xA;non-terminal that does not occur on the RHS of any production.&lt;/p&gt;&#xA;&lt;p&gt;The look-aheads (&lt;code&gt;las&lt;/code&gt;) of an item are either not shown, or shown only&#xA;in brevity, as most items contain several tens of look-aheads.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

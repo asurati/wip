@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>vc4: Winding Order | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">vc4: Winding Order</span></h1>
+
+<h2 class="date">2023/06/30</h2>
+</div>
+
+<main>
+<p><em>Warning: Improperly programming a GPU, or a display, may damage the devices.</em></p>
+<p>This post demonstrates the effects of the triangle winding order on the render.</p>
+<hr>
+<h3 id="preparation"><strong>Preparation:</strong></h3>
+<p>RPi <code>vc4</code> GPU, by default, assumes CCW winding order as denoting the front-face
+of a triangle. The GPU also assumes that the start of the frame-buffer holds
+the bottom-left pixel of the render. Effectively, the GPU adheres to a
+typical Cartesian coordinate system - the bottom-left corner is the origin, and
+the Y coordinate increases as it moves up.</p>
+<p>But, the display pipeline (crtc, encoder, connector, monitor) assumes a
+coordinate system where the top-left corner is considered to be the origin, and
+the Y coordinate increases as it moves down. This particular difference, in
+addition to the winding order of the triangles, requires a bit of care in order
+to accurately draw and display an image.</p>
+<p>Suppose that one wants to display the <code>256x256</code>
+<a href="https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/lunarg.ppm.h">LunarG</a>
+image on a <code>256x256</code> frame-buffer. Below is the view GPU has of the
+various coordinates of the square to be rendered:</p>
+<pre><code>ndc(-1,1,-1)                                ndc(1,1,-1)
+scr(-128,128,0)                             (128,128,0)
+tex(0, 1)                                   tex(1, 1)
+
+                    ndc(0,0,-1)
+                    scr(128,128,0)
+                    tex(0.5, 0.5)
+
+ndc(-1,-1,-1)                               ndc(1,-1,-1)
+scr(-128,-128,0)                            (128,-128,0)
+tex(0, 0)                                   tex(1, 0)
+</code></pre>
+<p>Since the GPU assumes CCW winding order as denoting the front-face of a
+triangle, the vertices that we provide to the GPU are also in CCW order, as
+shown below. These are viewport/screen coordinates, in <code>12.4 fixed-point</code>
+format, being provided to the GPU&rsquo;s <code>non-vertex-shading</code> pipeline.</p>
+<pre><code class="language-c">// {x, y, z, 1/wc, s, t}    //  NV-shader in-mem vertex format
+
+{-2048, 2048, 0, 1, 0, 1},  //  TL
+{-2048, -2048, 0, 1, 0, 0}, //  BL
+{2048, -2048, 0, 1, 1, 0},  //  BR
+
+{2048, -2048, 0, 1, 1, 0},  //  BR
+{2048, 2048, 0, 1, 1, 1},   //  TR
+{-2048, 2048, 0, 1, 0, 1},  //  TL
+</code></pre>
+<p>If the GPU is asked to render only the first triangle, <code>(TL, BL, BR)</code>, and if
+the frame-buffer as displayed by the monitor is captured, the image is:</p>
+<p><img src="/wip/images/winding.0.png" alt="winding.0.png"></p>
+<p>Because of the disagreement between the GPU and the display about the
+frame-buffer&rsquo;s orientation, the image seen is inverted. If the image is flipped
+vertically, the GPU&rsquo;s view of the render emerges: the image is consistent with
+the Cartesian coordinate system inside of which the GPU renders.</p>
+<p><img src="/wip/images/winding.0.rev.png" alt="winding.0.rev.png"></p>
+<h3 id="fix-the-inverted-image"><strong>Fix the inverted image:</strong></h3>
+<p>There may be multiple ways to have the GPU&rsquo;s output rendered in the &lsquo;correct&rsquo;
+orientation as seen by a viewer.</p>
+<p>The display pipeline may be requested to consider the start of the frame-buffer
+as the bottom-left corner of the display. Since the display circuitry
+(usually) refreshes the screen from top-to-bottom, it reads the frame-buffer
+from bottom-to-top, instead of the usual top-to-bottom.</p>
+<p>Another option is to have the GPU render in the frame-buffer, an image which is
+the expected image flipped across the X-axis. Such a frame-buffer is ready for
+consumption by the display pipeline. The GPU does the job of flipping
+the image for us, so that the frame-buffer, as written by the GPU, has the
+top-row of the expected image at the start of the frame-buffer.</p>
+<p>A way to have the GPU render an inverted image is to flip the sign of the
+clip-space (or screen-space, if utilizing <code>non-vertex-shading</code> pipeline)
+Y-coordinate of each vertex (<code>Y-flip</code>). This change is performed in the
+vertex-shader.</p>
+<p>But such a change to the Y-coordinate has the effect of reversing the winding
+order of the triangles.</p>
+<p>If originally the vertices were specified with the CCW winding order, the
+<code>Configuration Bit</code> named <code>Clockwise Primitives</code> must be set. After the
+Y-flip, a front-facing triangle&rsquo;s vertices gets ordered in CW
+winding-order; without that bit set, the front-facing triangle will be
+considered to be a back-facing one by the Primitive Processing stage.</p>
+<p>If originally the vertices were specified with the CW winding order, the
+<code>Configuration Bit</code> named <code>Clockwise Primitives</code> doesn&rsquo;t need to be set.
+After the Y-flip, a front-facing triangle&rsquo;s vertices will be ordered in CCW
+winding-order; the CCW winding-order is considered, by default
+(i.e. when <code>Clockwise Primitives</code> bit is off) to denote front-facing
+triangles.</p>
+<p>Below is the setup, when specifying the vertices in the CW winding order, along
+with the Y-flip:</p>
+<pre><code>ndc(-1,1,-1)                                ndc(1,1,-1)
+scr(-128,128,0)                             (128,128,0)
+tex(0, 1)                                   tex(1, 1)
+
+                    ndc(0,0,-1)
+                    scr(128,128,0)
+                    tex(0.5, 0.5)
+
+ndc(-1,-1,-1)                               ndc(1,-1,-1)
+scr(-128,-128,0)                            (128,-128,0)
+tex(0, 0)                                   tex(1, 0)
+</code></pre>
+<p>The triangles specified in the CW winding order:</p>
+<pre><code class="language-c">// {x, y, z, 1/wc, s, t},
+
+{-2048, 2048, 0, 1, 0, 1},  //  TL
+{2048, -2048, 0, 1, 1, 0},  //  BR
+{-2048, -2048, 0, 1, 0, 0}, //  BL
+
+{-2048, 2048, 0, 1, 0, 1},  //  TL
+{2048, 2048, 0, 1, 1, 1},   //  TR
+{2048, -2048, 0, 1, 1, 0},  //  BR
+</code></pre>
+<p>After the Y-flip (Note that the texture coordinates aren&rsquo;t changed):</p>
+<pre><code class="language-c">// {x, y, z, 1/wc, s, t},
+
+{-2048, -2048, 0, 1, 0, 1}, //  TL
+{2048, 2048, 0, 1, 1, 0},   //  BR
+{-2048, 2048, 0, 1, 0, 0},  //  BL
+
+{-2048, -2048, 0, 1, 0, 1}, //  TL
+{2048, -2048, 0, 1, 1, 1},  //  TR
+{2048, 2048, 0, 1, 1, 0},   //  BR
+</code></pre>
+<p>These Y-flipped coordinates are passed to the GPU; it is asked to render only
+the first triangle (<code>TL, BR, BL</code>), and the result is an up-right image, as
+expected:</p>
+<p><img src="/wip/images/winding.1.png" alt="winding.1.png"></p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

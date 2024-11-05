@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>cc: Postfix Conditional Expressions | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">cc: Postfix Conditional Expressions</span></h1>
+
+<h2 class="date">2023/12/19</h2>
+</div>
+
+<main>
+<p>This post demonstrates the outline of a method to convert a conditional
+expression (possibly containing other such expressions within itself) into a
+postfix expression. It may be possible to optimize the method further.</p>
+<p>The conversion helps with evaluating the <code>constant-expression</code> of the <code>#if</code>
+directive.</p>
+<p>An expression such as <code>a ? b : c</code> is thought to be ending with a delimiter
+<code>¿</code> (the upside-down question mark), so that, in its postfix representation,
+the delimiter serves as the end-marker for the corresponding conditional
+expression.</p>
+<p>The operators are <code>*</code>, <code>+</code>, <code>?</code>, <code>¿</code> and <code>:</code>, while the variables are
+lowercase alphabets, or constants.</p>
+<hr>
+<h3 id="rules-of-precedencea-nameprecedence_rulesa">Rules of Precedence:<a name="precedence_rules"></a></h3>
+<p>The operators <code>?</code> and <code>¿</code> have the same precedence and are right-associative
+with respect each other. Each of them is also right-associative with respect to
+itself. The right associativity allows processing the conditional expressions
+from inside-out while maintaining the boundaries for each.</p>
+<p>The precedence of the operators, from highest to lowest, is:</p>
+<pre><code>    *
+    +
+    ? ¿
+    :
+</code></pre>
+<hr>
+<h3 id="example-1a-nameexample1a">Example #1:<a name="example1"></a></h3>
+<p>The conditional expression is: <code>a ? b ? c : d + 2 * f : g</code>. Grouping them using
+parentheses, <code>(a ? (b ? c : d + 2 * f) : g)</code>.</p>
+<h4 id="step-100">Step #1.00:</h4>
+<p>Maintain two stacks, <code>output</code> and <code>operator</code>, both of which are initially empty.</p>
+<pre><code>       input: a ? b ? c : d + 2 * f : g
+      output:
+    operator:
+</code></pre>
+<hr>
+<h4 id="step-101">Step #1.01:</h4>
+<p>The element in the front of the input is the variable <code>a</code>. Push it on the top
+of the <code>output</code> stack.</p>
+<pre><code>       input: ? b ? c : d + 2 * f : g
+      output: a
+    operator:
+</code></pre>
+<hr>
+<h4 id="step-102">Step #1.02:</h4>
+<p>The next element in the input is the operator <code>?</code>. The <code>operator</code> is empty;
+there is no need for precedence comparison yet. Push the <code>?</code> operator on the top
+of both the stacks.</p>
+<pre><code>       input: b ? c : d + 2 * f : g
+      output: a ?
+    operator: ?
+              a &lt;-- marking to identify the controlling condition.
+</code></pre>
+<hr>
+<h4 id="step-103">Step #1.03:</h4>
+<p>The next element in the input is the variable <code>b</code>. Push it on the top of the
+<code>output</code> stack.</p>
+<pre><code>       input: ? c : d + 2 * f : g
+      output: a ? b
+    operator: ?
+              a
+</code></pre>
+<hr>
+<h4 id="step-104">Step #1.04:</h4>
+<p>The next element in the input is the operator <code>?</code>. The top of the <code>operator</code>
+stack has an operator <code>?</code>. Since <code>?</code> is considered to be right-associative with
+respect to itself, it gets pushed on the <code>operator</code> stack, as well as on the
+<code>output</code> stack.</p>
+<pre><code>       input: c : d + 2 * f : g
+      output: a ? b ?
+    operator: ? ?
+              a b
+</code></pre>
+<hr>
+<h4 id="step-105">Step #1.05:</h4>
+<p>The next element in the input is the variable <code>c</code>. Push it on the top of the
+<code>output</code> stack.</p>
+<pre><code>       input: : d + 2 * f : g
+      output: a ? b ? c
+    operator: ? ?
+              a b
+</code></pre>
+<hr>
+<h4 id="step-106">Step #1.06:</h4>
+<p>The next element in the input is the operator <code>:</code>. It corresponds to the <code>?</code>
+operator (marked with <code>b</code>) on the top of the <code>operator</code> stack. Since the
+precedence of <code>:</code> is lower than that of <code>?</code>, it causes the <code>?</code> on the top of the
+<code>operator</code> stack to <em>change</em> to <code>¿</code>, marking the beginning of the last clause
+of the conditional operator. Additionally, <code>:</code> gets pushed over the <code>output</code>
+stack too.</p>
+<pre><code>       input: d + 2 * f : g
+      output: a ? b ? c :
+    operator: ? ¿
+              a b
+</code></pre>
+<hr>
+<h4 id="step-107">Step #1.07:</h4>
+<p>The next element in the input is the variable <code>d</code>. Push it on the top of the
+<code>output</code> stack.</p>
+<pre><code>       input: + 2 * f : g
+      output: a ? b ? c : d
+    operator: ? ¿
+              a b
+</code></pre>
+<hr>
+<h4 id="step-108">Step #1.08:</h4>
+<p>The next element in the input is the operator <code>+</code>. Its precedence is higher than
+the that of the operator on the top of the <code>operator</code> stack, <code>¿</code>. Push it on to
+the stack.</p>
+<pre><code>       input: 2 * f : g
+      output: a ? b ? c : d
+    operator: ? ¿ +
+              a b
+</code></pre>
+<hr>
+<h4 id="step-109">Step #1.09:</h4>
+<p>The next element in the input is the constant <code>2</code>. Push it on the top of the
+<code>output</code> stack.</p>
+<pre><code>       input: * f : g
+      output: a ? b ? c : d 2
+    operator: ? ¿ +
+              a b
+</code></pre>
+<hr>
+<h4 id="step-110">Step #1.10:</h4>
+<p>The next element in the input is the operator <code>*</code>. Its precedence is higher than
+the that of the operator on the top of the <code>operator</code> stack, <code>+</code>. Push it on to
+the stack.</p>
+<pre><code>       input: f : g
+      output: a ? b ? c : d 2
+    operator: ? ¿ + *
+              a b
+</code></pre>
+<hr>
+<h4 id="step-111">Step #1.11:</h4>
+<p>The next element in the input is the variable <code>f</code>. Push it on the top of the
+<code>output</code> stack.</p>
+<pre><code>       input: : g
+      output: a ? b ? c : d 2 f
+    operator: ? ¿ + *
+              a b
+</code></pre>
+<hr>
+<h4 id="step-112">Step #1.12:</h4>
+<p>The next element in the input is the operator <code>:</code>.</p>
+<p>Its precedence is lower than that of the operator on the top of the <code>operator</code>
+stack, <code>*</code>. Pop <code>*</code> and push it on to the <code>output</code> stack.</p>
+<pre><code>       input: : g
+      output: a ? b ? c : d 2 f *
+    operator: ? ¿ +
+              a b
+</code></pre>
+<p>The precedence of <code>:</code> is lower than that of the operator on the top of the
+<code>operator</code> stack, <code>+</code>. Pop <code>+</code> and push it on to the <code>output</code> stack.</p>
+<pre><code>       input: : g
+      output: a ? b ? c : d 2 f * +
+    operator: ? ¿
+              a b
+</code></pre>
+<p>The precedence of <code>:</code> is lower than that of the operator on the top of the
+<code>operator</code> stack, <code>¿</code>. Pop <code>¿</code> and push it on to the <code>output</code> stack.</p>
+<pre><code>       input: : g
+      output: a ? b ? c : d 2 f * + ¿
+    operator: ?
+              a
+</code></pre>
+<p>The precedence of <code>:</code> is lower than that of the operator on the top of the
+<code>operator</code> stack, <code>?</code>. But, instead of popping it, <em>change</em> <code>?</code> to <code>¿</code>,
+and then push <code>:</code> on to the <code>output</code> stack.</p>
+<pre><code>       input: g
+      output: a ? b ? c : d 2 f * + ¿ :
+    operator: ¿
+              a
+</code></pre>
+<hr>
+<h4 id="step-113">Step #1.13:</h4>
+<p>The last element in the input is the variable <code>g</code>. Push it on the top of the
+<code>output</code> stack.</p>
+<pre><code>       input:
+      output: a ? b ? c : d 2 f * + ¿ : g
+    operator: ¿
+              a
+</code></pre>
+<p>With the input empty, pop the <code>operator</code> stack and push the elements on to the
+<code>output</code> stack in the order they are popped.</p>
+<pre><code>       input:
+      output: a ? b ? c : d 2 f * + ¿ : g ¿
+    operator:
+</code></pre>
+<p>The extent of each conditional expression can be seen on the stack, and it
+matches with the grouping produced by adding parentheses.</p>
+<p>With the help of the markers <code>?</code>, <code>:</code>, and <code>¿</code>, the evaluator can easily
+skip/evaluate the sub-expressions, as commanded by their controlling condition.</p>
+<pre><code>      output: a ? b ? c : d 2 f * + ¿ : g ¿
+              ^   ^     ^           ^ ^   ^
+              |   |     |           | |   |
+              |   +-----+-----------+ |   |
+              +-----------------------+---+
+
+              (a? (b? c : d + 2 *  f) :  g)
+</code></pre>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

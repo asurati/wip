@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Driving the HDMI Display Pipeline | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Driving the HDMI Display Pipeline</span></h1>
+
+<h2 class="date">2021/10/15</h2>
+</div>
+
+<main>
+<p>The demos have been relying on the firmware to setup the HDMI display pipeline
+and to provide them with a frame buffer to draw on.</p>
+<p>The program found <a href="https://github.com/asurati/x03/blob/main/dev/disp.c">here</a>
+attempts to take the control of the pipeline from the firmware, and run it
+on its own.</p>
+<p>Because of the lack of documentation, the Linux <code>vc4</code> driver was consulted
+to determine the registers to setup and the sequence of steps necessary, to
+disable and enable the pipeline.</p>
+<p>The program can successfully setup the pipeline to display at resolutions
+640x480@60Hz, 800x600@60Hz, and 1920x1080@60Hz.</p>
+<hr>
+<p>One of the problems faced during this programming was the problem where the
+monitor would display a horizontal resolution of +2 pixels. That is, if the
+desired resolution were 640x480@60Hz, the monitor would instead run with
+642x480@60Hz. The left-most two columns of the pixels were purple/violet in
+colour. The first column of the frame buffer was thus at column #2 on the
+screen.</p>
+<p>A similar problem is described within a bug,
+<a href="https://bugs.freedesktop.org/show_bug.cgi?id=27452">here</a>. The bug also
+describes the root cause - monitor not being sent the appropriate infoframe
+packets.</p>
+<p>Following that hint, the program sends a properly configured AVI InfoFrame
+corresponding to the resolution being set. It does so by writing into the
+appropriate HDMI Packet RAM registers, and asking the HDMI encoder to pull
+the infoframe by reading them. With these two steps, the monitor displays the
+expected resolutions exactly.</p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

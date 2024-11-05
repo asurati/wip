@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>RPi on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/rpi/</link>
+    <description>Recent content in RPi on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 04 Jul 2023 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/rpi/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>vc4: cube demo - &#39;from scratch&#39;</title>
+      <link>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates a partial recreation of the&#xA;&lt;a href=&#34;https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/cube.c&#34;&gt;&lt;code&gt;vkcube&lt;/code&gt;&lt;/a&gt;&#xA;application, but&#xA;directly on the &lt;code&gt;vc4&lt;/code&gt; GPU, without involving any of the software graphics APIs.&#xA;It is a partial recreation, as the only behavior it demonstrates is a&#xA;&lt;a href=&#34;https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/lunarg.ppm.h&#34;&gt;&lt;code&gt;LunarG&lt;/code&gt;&lt;/a&gt;&#xA;cube, rotating on its Y-axis. &lt;code&gt;vkcube&lt;/code&gt; additionally supports speeding up or&#xA;slowing down the spinning cube, and reversing the direction of the spin.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>vc4: Winding Order</title>
+      <link>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</link>
+      <pubDate>Fri, 30 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates the effects of the triangle winding order on the render.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;preparation&#34;&gt;&lt;strong&gt;Preparation:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;RPi &lt;code&gt;vc4&lt;/code&gt; GPU, by default, assumes CCW winding order as denoting the front-face&#xA;of a triangle. The GPU also assumes that the start of the frame-buffer holds&#xA;the bottom-left pixel of the render. Effectively, the GPU adheres to a&#xA;typical Cartesian coordinate system - the bottom-left corner is the origin, and&#xA;the Y coordinate increases as it moves up.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>vc4: T-format Textures</title>
+      <link>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</link>
+      <pubDate>Tue, 27 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post describes the layout of the &lt;code&gt;vc4&lt;/code&gt; T-format textures.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;preparation&#34;&gt;&lt;strong&gt;Preparation:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;RPi &lt;code&gt;vc4&lt;/code&gt; GPU consumes textures that are either in &lt;code&gt;T-format&lt;/code&gt;, or in&#xA;&lt;code&gt;LT-format&lt;/code&gt;.&#xA;Quoting the &lt;a href=&#34;https://docs.broadcom.com/doc/12358545&#34;&gt;VideoCoreIV-AG100-R&lt;/a&gt;&#xA;reference guide:&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;The hardware automatically determines type of image (T-format or LT-format)&#xA;by looking at LOD dimensions. The hardware assumes a level is in T-format&#xA;unless either the width or height for the level is less than one T-format&#xA;tile. In this case use the hardware assumes the level is stored in LT-format.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Driving the HDMI Display Pipeline</title>
+      <link>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</guid>
+      <description>&lt;p&gt;The demos have been relying on the firmware to setup the HDMI display pipeline&#xA;and to provide them with a frame buffer to draw on.&lt;/p&gt;&#xA;&lt;p&gt;The program found &lt;a href=&#34;https://github.com/asurati/x03/blob/main/dev/disp.c&#34;&gt;here&lt;/a&gt;&#xA;attempts to take the control of the pipeline from the firmware, and run it&#xA;on its own.&lt;/p&gt;&#xA;&lt;p&gt;Because of the lack of documentation, the Linux &lt;code&gt;vc4&lt;/code&gt; driver was consulted&#xA;to determine the registers to setup and the sequence of steps necessary, to&#xA;disable and enable the pipeline.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Pixel Clock: PLLH_PIX</title>
+      <link>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</link>
+      <pubDate>Thu, 14 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</guid>
+      <description>&lt;p&gt;This post investigates the programming of the HDMI &lt;code&gt;pixel&lt;/code&gt; clock, performed by&#xA;the RPi firmware to push the pixels into the HDMI encoder at that frequency.&lt;/p&gt;&#xA;&lt;p&gt;Booting with the RPi firmware and the U-Boot, the actual resolution of the&#xA;display is 1920x1080@60Hz. The resolution of the frame buffer might be lower -&#xA;the HVS takes care of appropriately scaling and positioning the pixels.&lt;/p&gt;&#xA;&lt;p&gt;Below is the &lt;code&gt;Modeline&lt;/code&gt; details about the 1920x1080@60Hz resolution. These&#xA;details were extracted out of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Extended_Display_Identification_Data&#34;&gt;EDID&lt;/a&gt; information gathered from the monitor:&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Export HVS output to the system RAM</title>
+      <link>https://asurati.github.io/wip/post/2021/10/08/qpu-demo-export-hvs-output-to-the-system-ram/</link>
+      <pubDate>Fri, 08 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/08/qpu-demo-export-hvs-output-to-the-system-ram/</guid>
+      <description>&lt;p&gt;This demo presents a way to configure HVS FIFO2/Channel2 and the Transposer&#xA;(TXP) block to gather the scaled/converted/transformed scan-lines into a buffer&#xA;inside the system RAM.&lt;/p&gt;&#xA;&lt;p&gt;The HVS FIFO2 has a choice in how its output is consumed - it can be consumed&#xA;either by PV1, or by the TXP block. The RPi firmware, by default, seems to&#xA;disable the FIFO2 output (&lt;code&gt;DSP3_MUX&lt;/code&gt;), so that it is not connected to PV1. This is&#xA;very fortunate, as the firmware has already done a part of the necessary setup.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>HVS and PV Settings</title>
+      <link>https://asurati.github.io/wip/post/2021/10/07/hvs-and-pv-settings/</link>
+      <pubDate>Thu, 07 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/07/hvs-and-pv-settings/</guid>
+      <description>&lt;p&gt;This post investigates the contents of the registers belonging to the&#xA;Hardware Video Scaler (HVS), and to the PixelValve (PV) devices.&lt;/p&gt;&#xA;&lt;p&gt;When a request is made to the&#xA;&lt;a href=&#34;https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface#allocate-buffer&#34;&gt;MailBox&lt;/a&gt;&#xA;interface for a Frame Buffer with required properties, the RPi firmware&#xA;programs the HVS and the PV in order to drive the display accordingly.&lt;/p&gt;&#xA;&lt;p&gt;The demos have been requesting a resolution of 640x480, 32bpp, with a default&#xA;pixel order of BGRA8888 (0xaarrggbb, or ARGB32).&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with MSAA 4x</title>
+      <link>https://asurati.github.io/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/</link>
+      <pubDate>Tue, 05 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/</guid>
+      <description>&lt;p&gt;This demo works with the same triangle as seen in earlier demos; the demo&#xA;utilizes the full 3D pipeline, employs Coordinate and Vertex shaders that&#xA;are not merely pass-through but that perform the Perspective and ViewPort&#xA;transformations (the Model and Camera/View transformations are assumed to have&#xA;been performed outside), and enables 4x multi-sampling for a smoother display&#xA;of the triangle.&lt;/p&gt;&#xA;&lt;p&gt;The Coordinate and Vertex shaders perform the Matrix-Vector multiplication, in&#xA;order to calculate the Clip Coordinates of each vertex, perform the Perspective&#xA;divide to calculate the Normalized Device Coordinates, and perform the&#xA;ViewPort Transformation to calculate the Screen Coordinates relative to the&#xA;ViewPort Centre. The Vertex Shader additionally passes through the colour&#xA;information of each vertex.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with a GL Pass-Through Shader</title>
+      <link>https://asurati.github.io/wip/post/2021/10/04/qpu-demo-triangle-with-a-gl-pass-through-shader/</link>
+      <pubDate>Mon, 04 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/04/qpu-demo-triangle-with-a-gl-pass-through-shader/</guid>
+      <description>&lt;p&gt;This demo results in the same output image as displayed in&#xA;&lt;a href=&#34;https://asurati.github.io/wip/wip/post/2021/10/02/qpu-demo-nv-shader&#34;&gt;Triangle With NV Shader&lt;/a&gt;, but this&#xA;time the full 3D pipeline is employed, with the exception that the Coordinate&#xA;and the Vertex Shaders are mere pass-through shaders.&lt;/p&gt;&#xA;&lt;p&gt;The Coordinate and the Vertex Shaders are each tasked with reading the input&#xA;vertex attributes off the VPM (placed there by the Vertex Cache Manager), and&#xA;writing shaded vertices in specific output formats back into the VPM.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with NV Shader</title>
+      <link>https://asurati.github.io/wip/post/2021/10/02/qpu-demo-triangle-with-nv-shader/</link>
+      <pubDate>Sat, 02 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/02/qpu-demo-triangle-with-nv-shader/</guid>
+      <description>&lt;p&gt;This demo presents a method of programming the GPU to display a triangle, with&#xA;the interpolation of the colours at the pixels covered by it. The graphics&#xA;concepts used here borrow heavily from those of OpenGL.&lt;/p&gt;&#xA;&lt;p&gt;The GPU pipeline supports running in non-vertex-shading mode, or the NV mode.&#xA;In this mode, pre-shaded vertices are presented to the pipeline. That is,&#xA;the jobs of coordinate and vertex shader are done outside of the pipeline. In&#xA;this demo, those jobs/calculations are done by hand, to produce the pre-shaded&#xA;vertices in the format expected by the mode (see the section&#xA;&lt;em&gt;Shaded Vertex Format in Memory&lt;/em&gt; in the specification for the layout of the&#xA;format).&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Binary NOT operation</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-binary-not-operation/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-binary-not-operation/</guid>
+      <description>&lt;p&gt;This demo builds upon&#xA;&lt;a href=&#34;https://asurati.github.io/wip/wip/post/2021/09/28/qpu-demo-dma-transfers/&#34;&gt;QPU Demo: DMA Transfers&lt;/a&gt;,&#xA;and presents a method of importing four 16-element vectors of integers&#xA;from VPM to QPU registers, performing a binary NOT on the elements, and&#xA;exporting the results back to the VPM.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;transfer-methods&#34;&gt;&lt;strong&gt;Transfer Methods:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;For QPU to be able to access the vectors and perform any calculations on them,&#xA;they must first be brought from the system RAM, where they usually resides,&#xA;into the VPM. This was a topic of the second demo.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: DMA Transfers</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-dma-transfers/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-dma-transfers/</guid>
+      <description>&lt;p&gt;This demo presents a method of programming the V3D DMA controller to&#xA;transfer four 16-element vectors of integers back and forth between the system&#xA;RAM and the VPM.&lt;/p&gt;&#xA;&lt;p&gt;It is natural for the QPU to work with 16-element vectors. To that end, its&#xA;registers can accommodate 16 32-bit values (there are indeed a few exceptions,&#xA;however).&lt;/p&gt;&#xA;&lt;p&gt;In AMD terminology, a QPU can be said to process a wavefront made up of 16&#xA;workitems.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Interrupting the host</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-interrupting-the-host/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-interrupting-the-host/</guid>
+      <description>&lt;p&gt;This is the first in hopefully a few more articles demonstrating one of the&#xA;ways in which the RPi&amp;rsquo;s VideoCoreIV (vc4) GPU can be programmed.&lt;/p&gt;&#xA;&lt;p&gt;The 3D engine, V3D, is driven by the SIMD16 (physically SIMD4, but multiplexed&#xA;over four consecutive clock cycles) processors known as QPUs, Quad Processing Units,&#xA;or Quad Processors.&lt;/p&gt;&#xA;&lt;p&gt;In February 2014, Broadcom&#xA;&lt;a href=&#34;https://www.raspberrypi.org/blog/a-birthday-present-from-broadcom/&#34;&gt;released&lt;/a&gt;&#xA;a &lt;a href=&#34;https://docs.broadcom.com/doc/12358545&#34;&gt;specification&lt;/a&gt;&#xA;detailing the vc4 V3D architecture. That document is the primary basis&#xA;supporting the work demonstrated here.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

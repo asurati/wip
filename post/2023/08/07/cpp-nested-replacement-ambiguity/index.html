@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CPP: Nested Replacement Ambiguity | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">CPP: Nested Replacement Ambiguity</span></h1>
+
+<h2 class="date">2023/08/07</h2>
+</div>
+
+<main>
+<p>The <a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf">C2X</a>
+standard gives an example of a case where . . .</p>
+<blockquote>
+<p>. . . it is not clear whether a replacement is nested or not.</p>
+</blockquote>
+<p>Below is the example, in some detail, to expose the ambiguity.</p>
+<hr>
+<h3 id="61044-rescanning-and-further-replacement"><strong>6.10.4.4 Rescanning and further replacement</strong></h3>
+<p>The example source code is:</p>
+<pre><code class="language-c">    #define f(a) a*g
+    #define g(a) f(a)
+    f(2)(9)
+</code></pre>
+<p>The tokens subjected to macro replacement are those that constitute the
+invocation line <code>f(2)(9)</code>. The <code>active-macro-stack</code> is initially empty.</p>
+<p>Once the scanner reads the first identifier <code>f</code> on the line, and searches the
+list of defined macros for a match with that identifier, it finds a hit for a
+function-like macro named <code>f</code>. On further scanning the line, it recognizes an
+invocation, of the form <code>f(2)</code>, of that macro. The tokens forming the <code>rest</code> of
+the line, <code>(9)</code>, are, at this point, external to the recognized
+macro-invocation and to its replacement-list.</p>
+<p>To prepare for processing the macro-invocation <code>f(2)</code>, the preprocessor (<code>CPP</code>)
+pushes, on the <code>active-macro-stack</code>, an entry corresponding to the
+macro-invocation. The name of the macro, <code>f</code>, is the most important property of
+the entry.</p>
+<p>The stack at this point is:</p>
+<pre><code>    // active-macro-stack
+
+
+    f(2)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<p>Now towards expanding the <code>f(2)</code> macro-invocation.</p>
+<p>The full expansion (i.e. complete macro replacement) of the argument <code>2</code> is <code>2</code>
+itself (the symbol <code>2</code> isn&rsquo;t subject to such replacement in the first
+place, for it is not an identifier in the language of CPP).
+After substituting the argument into the replacement-list of the macro
+<code>f</code>, the situation is as shown below:</p>
+<pre><code>    f(2)     rest
+    +---     +---
+    |        |
+    v---     v---
+    2*g      rest
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>2*g</code>. The tokens for the symbols <code>2</code>
+and <code>*</code> are not subject to replacement (they aren&rsquo;t <code>identifiers</code> in the
+language of the CPP), hence they are output as they are, without any change.
+The identifier <code>g</code> is part of the replacement-list of the macro <code>f</code> currently
+being expanded, but it doesn&rsquo;t match with the name of any active macro
+(i.e. with the name of any macro that is being represented on the
+<code>active-macro-stack</code> at this point in time.)
+Hence, this token for the identifier <code>g</code> is allowed replacement during
+rescanning.</p>
+<p>But <code>g</code> is the name of a function-like macro. Since the rescanning step has
+access to the <code>rest</code> of the tokens, it can decide on the replacement of <code>g</code>
+after looking ahead one token to see if it can possibly manage to construct a
+complete macro-invocation.</p>
+<p>In this example, the rescanning step can indeed manage to construct such an
+invocation. The ambiguity arises exactly at this point.</p>
+<hr>
+<h3 id="option-1"><strong>Option 1</strong></h3>
+<p>One way to think about this situation is as described below:</p>
+<pre><code>    f(2)     (9)  &lt;--- rest of the tokens
+    +---     +--
+    |        |
+    v--      v--
+    2*g  -&gt;  (9)
+
+
+
+             g(9)
+             +---
+</code></pre>
+<p>The token for the identifier <code>g</code> can be thought of as moving <strong>out</strong>
+(marked in the above diagram with the arrow <nobr><code>-&gt;</code></nobr>) of the
+influence of the active macro <code>f</code> whose replacement-list generated it,
+because it needs tokens that are external to the replacement-list of which it
+is a part. As a result, the entry for the macro-invocation <code>f(2)</code> can be
+popped off the <code>active-macro-stack</code> and the entry for the macro-invocation
+<code>g(9)</code> can be pushed.</p>
+<pre><code>    // active-macro-stack
+
+    f(2)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<pre><code>    // active-macro-stack
+
+    (stack empty)
+    ---------------------------------
+</code></pre>
+<pre><code>    // active-macro-stack
+
+    g(9)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<p>The macro-invocation <code>f(2)</code> will no longer influence the macro
+processing that lies ahead, including the immediate processing of the
+macro-invocation <code>g(9)</code>, even though the token for the identifier <code>g</code> was
+donated by the replacement-list of the very macro-invocation <code>f(2)</code> that was
+popped off.</p>
+<p>Now towards expanding the <code>g(9)</code> macro-invocation.</p>
+<p>The full expansion of the argument <code>9</code> is <code>9</code> itself. After substituting the
+argument into the replacement-list of the macro <code>g</code>, the situation is as
+shown below:</p>
+<pre><code>    g(9)        rest is empty
+    +---
+    |
+    v---
+    f(9)
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>f(9)</code>. The identifier <code>f</code> is part of
+the replacement-list of the macro <code>g</code> currently being expanded, but it doesn&rsquo;t
+match with the name of any active macro. Hence, this token for the identifier
+<code>f</code> is allowed replacement during rescanning.</p>
+<p>It so happens that the substitution of the replacement-list of the macro <code>g</code>
+results in a complete invocation of the macro <code>f</code>, without even
+looking ahead into the <code>rest</code> of the tokens (Note that <code>rest</code> here is empty for
+this example.)</p>
+<p>Since the rescan determined that the identifier <code>f</code> is subject to replacement,
+it pushes an entry corresponding to the macro-invocation <code>f(9)</code> onto the
+<code>active-macro-stack</code>.</p>
+<pre><code>    // active-macro-stack
+
+
+    f(9)    &lt;---- top of the stack
+    g(9)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<p>Now towards expanding the <code>f(9)</code> macro-invocation.</p>
+<p>The full expansion of the argument <code>9</code> is <code>9</code> itself. After substituting the
+argument into the replacement-list of the macro <code>f</code>, the situation is as
+shown below:</p>
+<pre><code>    g(9)        (rest is empty)
+    +---
+    |
+    v---
+    f(9)
+    +---
+    |
+    v--
+    9*g
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>9*g</code>. The tokens for <code>9</code> and <code>*</code> are
+not subject to replacement, hence they are output as they are, without
+any change. The identifier <code>g</code> is part of the replacement-list of the macro
+<code>f</code> currently being expanded (and also indirectly of the replacement-list of
+the macro <code>g</code>. See the <code>active-macro-stack</code> above), and it does match with the
+name of an active macro, <code>g</code>; an invocation of the form <code>g(9)</code> is currently
+active as evident from the <code>active-macro-stack</code>. Hence, this token for the
+identifier <code>g</code> is marked to prevent its replacement.</p>
+<p>Even if there were further tokens in the source file (there aren&rsquo;t in this
+example) that produced a complete macro-invocation of the macro <code>g</code>, that
+invocation would not be considered for replacement because the token <code>g</code> is
+already marked for non-replacement.</p>
+<p>The output, then, is <code>2*9*g</code>.</p>
+<hr>
+<h3 id="option-2"><strong>Option 2</strong></h3>
+<p>Another way to think about the same situation is as described below:</p>
+<pre><code>    f(2)     (9)  &lt;--- rest of the tokens
+    +---     +--
+    |        |
+    v---     v--
+    2*g  &lt;-  (9)
+
+
+
+    g(9)
+    +---
+</code></pre>
+<p>The token-sequence <code>(9)</code> can be thought of as moving <strong>into</strong> (marked in the
+above diagram with the arrow <nobr><code>&lt;-</code></nobr>) the influence of the
+<code>active-macro-stack</code>, specifically of the active macro <code>f</code> with whose
+replacement-list the sequence will be joined. This movement is required to
+construct the macro-invocation <code>g(9)</code>. As a result, the entry for the
+macro-invocation <code>f(2)</code> remains active, influencing this one macro-invocation
+<code>g(9)</code>. But that entry does not influence any macro processing that may occur
+on tokens lying after <code>(9)</code>. CPP pushes onto the <code>active-macro-stack</code> an entry
+corresponding to the macro-invocation <code>g(9)</code>.</p>
+<pre><code>    // active-macro-stack
+
+
+    g(9)    &lt;---- top of the stack
+    f(2)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<p>Now towards expanding the <code>g(9)</code> macro-invocation.</p>
+<p>The full expansion of the argument <code>9</code> is <code>9</code> itself. After substituting the
+argument into the replacement-list of the macro <code>g</code>, the situation is as
+shown below:</p>
+<pre><code>    f(2)     (9)  &lt;--- rest of the tokens
+    +---     +--
+    |        |
+    v---     v--
+    2*g  &lt;-  (9)
+
+
+
+    g(9)       (rest is empty)
+    +---
+    |
+    v---
+    f(9)
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>f(9)</code>. The identifier <code>f</code> is part of
+the replacement-list of the macro <code>g</code> currently being expanded, and it does
+match with the name of an active macro, <code>f</code>; an invocation of the form <code>f(2)</code>
+is currently active as evident from the <code>active-macro-stack</code>. Hence, this token
+for the identifier <code>f</code> is marked to prevent its replacement.</p>
+<p>The output, then, is <code>2*f(9)</code>.</p>
+<hr>
+<h3 id="conclusion"><strong>Conclusion</strong></h3>
+<p>The direction of the movement between the tokens under the influence of the
+top macro on the <code>active-macro-stack</code> and the tokens external to the
+replacement-list of that macro determines the behavior that is exhibited by the
+implementation.</p>
+<p>Note that the tokens, external to the replacement-list of the macro, say <code>m0</code>,
+that sits at the top of the <code>active-macro-stack</code>, can still be a part of the
+replacement-list of a macro, say <code>m1</code>, that sits directly beneath <code>m0</code> on the
+stack. Thus, such tokens are not considered external to <code>m1</code> after the
+processing pops <code>m0</code> off the stack.</p>
+<p>Subjecting the example to the latest <code>GCC</code>, <code>Clang/LLVM</code> and <code>MSVC</code> compilers
+for <code>x86-64</code> shows that they behave as described in
+<a href="#option-1">Option 1</a> - i.e., their behavior is consistent with that where the
+tokens move <em>out</em> of the influence of the latest-expanded macro, instead of
+that where the tokens external to the replacement-list are brought <em>into</em> the
+influence.</p>
+<hr>
+<p><em>Section 6.10.4.4</em> of the document declares these options/behaviors as
+<code>unspecified behavior</code>:</p>
+<blockquote>
+<p>behavior, that results from the use of an unspecified value, or other
+behavior upon which this document provides two or more possibilities and
+imposes no further requirements on which is chosen in any instance</p>
+</blockquote>
+<p>The section also warns:</p>
+<blockquote>
+<p>Strictly conforming programs are not permitted to depend on such unspecified
+behavior.</p>
+</blockquote>
+<p><em>Annex J, Section J.1, Item #24</em> says:</p>
+<blockquote>
+<p>When a fully expanded macro replacement list contains a function-like macro
+name as its last preprocessing token and the next preprocessing token from
+the source file is a (, and the fully expanded replacement of that macro ends
+with the name of the first macro and the next preprocessing token from the
+source file is again a (, whether that is considered a nested replacement
+(6.10.4). . . . . . . . . .[is unspecified behavior.]</p>
+</blockquote>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

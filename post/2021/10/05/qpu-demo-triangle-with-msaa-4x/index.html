@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QPU Demo: Triangle with MSAA 4x | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">QPU Demo: Triangle with MSAA 4x</span></h1>
+
+<h2 class="date">2021/10/05</h2>
+</div>
+
+<main>
+<p>This demo works with the same triangle as seen in earlier demos; the demo
+utilizes the full 3D pipeline, employs Coordinate and Vertex shaders that
+are not merely pass-through but that perform the Perspective and ViewPort
+transformations (the Model and Camera/View transformations are assumed to have
+been performed outside), and enables 4x multi-sampling for a smoother display
+of the triangle.</p>
+<p>The Coordinate and Vertex shaders perform the Matrix-Vector multiplication, in
+order to calculate the Clip Coordinates of each vertex, perform the Perspective
+divide to calculate the Normalized Device Coordinates, and perform the
+ViewPort Transformation to calculate the Screen Coordinates relative to the
+ViewPort Centre. The Vertex Shader additionally passes through the colour
+information of each vertex.</p>
+<p>To enable MSAA, set the <code>Multisample Mode (4x)</code> flag in the
+Tile Binning Mode Control Record (0x70), and in the
+Tile Rendering Mode Control Record (0x71).
+Additionally, set the <code>Rasteriser Oversample Mode</code> to <code>4x</code> in the
+Configuration Bits Control Record (0x60).</p>
+<p>A final change to make is to set the tile size to 32x32. The tile size is
+reduced to accommodate multiple samples per pixel within the Tile Buffer.</p>
+<hr>
+<h3 id="qpu-program"><strong>QPU Program:</strong></h3>
+<p>The shaders are found here:</p>
+<p><a href="https://github.com/asurati/x03/blob/main/demo/d52.cs.h">Coordinate Shader</a></p>
+<p><a href="https://github.com/asurati/x03/blob/main/demo/d52.vs.h">Vertex Shader</a></p>
+<p>The Fragment Shader remains the same as before.</p>
+<hr>
+<h3 id="running-the-demo"><strong>Running the demo:</strong></h3>
+<p>The driver program can be found
+<a href="https://github.com/asurati/x03/blob/main/demo/d53.c">here</a>.</p>
+<p>The Frame Buffer image is found <a href="/wip/images/d53.png">here</a>. Opening it in an
+image viewer that can disable its own anti-aliasing support
+(for instance, <code>feh --force-aliasing</code>) allows one to see the MSAA effect on
+individual pixels, especially those at the left and the right edges of the
+triangle, clearly.</p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

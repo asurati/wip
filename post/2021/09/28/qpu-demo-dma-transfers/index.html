@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QPU Demo: DMA Transfers | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">QPU Demo: DMA Transfers</span></h1>
+
+<h2 class="date">2021/09/28</h2>
+</div>
+
+<main>
+<p>This demo presents a method of programming the V3D DMA controller to
+transfer four 16-element vectors of integers back and forth between the system
+RAM and the VPM.</p>
+<p>It is natural for the QPU to work with 16-element vectors. To that end, its
+registers can accommodate 16 32-bit values (there are indeed a few exceptions,
+however).</p>
+<p>In AMD terminology, a QPU can be said to process a wavefront made up of 16
+workitems.</p>
+<hr>
+<h3 id="vpm"><strong>VPM:</strong></h3>
+<p>See <em>Section 7: VPM and VCD</em> of the specification, for more details on VPM.</p>
+<p>The <code>V3D_IDENT1</code> register exposes the total size of VPM available on the
+system. On the RPi1B, the size is 12KB.</p>
+<p>The VPM supports both graphics-related accesses and general-purpose accesses,
+even simultaneously provided that it is large enough (the 3D pipeline needs
+a minimum of 8KB of VPM).</p>
+<p>But, for performing general-purpose accesses specifically, an area of VPM,
+beginning at its start, must be reserved. The <code>V3D_VPMBASE</code> register allows
+one to configure the size of that reserved area. The default size configured is
+0, for no reservation at all.</p>
+<p>For the demo, the reservation is set to 4KB. Treating that reserved area of
+VPM as a 2D array of 32-bit words, the size corresponds exactly to a dimension
+of 64 rows, each 16 words wide. The interfaces, through which the VPM is
+read from and written to, enforce a 2D structure on it. That access
+mechanism is very similar to accessing double-dimensional arrays in languages
+like C.</p>
+<hr>
+<h3 id="transfer-methods"><strong>Transfer Methods:</strong></h3>
+<p>The transfer of data from the system RAM into the VPM is known as the
+DMA-read of the data - <em>DMA</em> because the external (to the GPU) system RAM is
+involved, and <em>read</em> because the system RAM is being read from.</p>
+<p>The reverse transfer is known as the DMA-write of the data -
+<em>DMA</em> because, again, the external system RAM is involved, and <em>write</em>
+because the system RAM is being written to. The direction of a DMA transfer
+is determined based on the point of view of the system RAM.</p>
+<p>DMA-reads can also be referred to as <em>VDR</em>, for Vertex DMA Read;
+similarly, <em>VDW</em>, or Vertex DMA Write, for DMA-writes.</p>
+<p>To perform a DMA-read, a set of VDR registers must be configured:</p>
+<ul>
+<li>Initialize the <code>VPMVCD_RD_SETUP</code> register with the transfer descriptor.</li>
+<li>Write into the <code>VPM_LD_ADDR</code> register, the bus address of the location in
+the system RAM to read from.</li>
+<li>Either stall, waiting for the transfer to complete, by reading once from the
+<code>VPM_LD_WAIT</code> register, or poll the <code>VPM_LD_BUSY</code> register for a zero value to
+appear.</li>
+</ul>
+<p>Similarly, a DMA-write can be performed by setting up a few VDW registers:</p>
+<ul>
+<li>Initialize the <code>VPMVCD_WR_SETUP</code> register with the transfer descriptor.</li>
+<li>Write, into the <code>VPM_ST_ADDR</code> register, the bus address of the location in
+the system RAM to write to.</li>
+<li>Either stall, waiting for the transfer to complete, by reading once from the
+<code>VPM_ST_WAIT</code> register, or poll the <code>VPM_ST_BUSY</code> register for a zero value to
+appear.</li>
+</ul>
+<hr>
+<h3 id="transfer-descriptor-formats"><strong>Transfer Descriptor Formats:</strong></h3>
+<ul>
+<li>For DMA-read, see <em>Table 36: VCD DMA Load (VDR) Basic Setup Format</em>.</li>
+<li>For DMA-write, see <em>Table 34: VCD DMA Store (VDW) Basic Setup Format</em>.</li>
+</ul>
+<hr>
+<h3 id="dma-read-transfer-descriptor-format"><strong>DMA-read Transfer Descriptor Format:</strong></h3>
+<p>The vectors are stored vertically within the last column, starting at the word
+address <code>Y=0,X=15</code>. Each column is 64 words high, so these vectors, which
+themselves contain a total of 64 words, completely fill it.</p>
+<p>The elements of each vector are stored vertically, and the vectors themselves
+are one on top of the other.</p>
+<p>Below is the transfer descriptor, to read four 16-element vectors of
+32-bit integers from the system RAM, and to store them into VPM in vertical
+access mode (See <em>Figure 9: VPM Vertical Access Mode Examples</em> for its layout).</p>
+<p>In hexadecimal, the value is <code>0x8304080f</code>.</p>
+<pre><code>ID| MODEW| MPITCH| ROWLEN| NROWS| VPITCH| VERT|      ADDRXY|
+ 1|   000|   0011|   0000|  0100|   0000|    1| 00000001111|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>ID</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>The <code>VPMVCD_RD_SETUP</code> can also help read data from VPM into a QPU register. This bit distinguishes between the setup of a RAM-to-VPM read, and that of a VPM-to-QPU read.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>MODEW</code></td>
+          <td style="text-align: right"><code>000</code></td>
+          <td>Selects the element width as 32 bits.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>MPITCH</code></td>
+          <td style="text-align: right"><code>0011</code></td>
+          <td>Each vector is present in the system RAM side-by-side, consecutively. If each vector is considered as a row, the row-to-row pitch/stride is 64 bytes. The corresponding value to fill here is <code>3</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>ROWLEN</code></td>
+          <td style="text-align: right"><code>0000</code></td>
+          <td>This field provides the size (in units of the width selected within <code>MODEW</code>) of the row to access. The row-length can be smaller than the stride/<code>MPITCH</code> to accommodate reading only the first few needed words of the row, and skipping the rest, before moving on to the next row. The value <code>0</code> represents a length of <code>16</code> words, each of a size as programmed in <code>MODEW</code>, 32-bit here.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>NROWS</code></td>
+          <td style="text-align: right"><code>0100</code></td>
+          <td>The number of rows of data in system RAM. Four in this case.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>VPITCH</code></td>
+          <td style="text-align: right"><code>0000</code></td>
+          <td>Similar to <code>MPITCH</code>, this field helps the DMA controller move to the next row inside the VPM to begin storing into it the next row. This value is added to the Y coordinate of the address. Since this demo accesses the VPM in a vertical mode, the appropriate increment is <code>16</code>. Correspondingly, the value programmed is <code>0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>VERT</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>The access mode. One can visualize the layout of the storage as <br><code>vpm[0][15] = vec[0][0];</code> <br><code>vpm[1][15] = vec[0][1];</code> <br><code>vpm[2][15] = vec[0][2];</code> <br>&hellip; <br><code>vpm[63][15] = vec[3][15];</code> <br>Each VPM location here is accessed as <code>vpm[Y=#][X=#]</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>ADDRXY</code></td>
+          <td style="text-align: right"><code>00000001111</code></td>
+          <td>The start address, to being writing into the VPM at, is <code>Y=0,X=15</code>. The <em>Figure 9</em> in the specification shows that this address corresponds to the rightmost column.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h3 id="dma-write-transfer-descriptor-format"><strong>DMA-write Transfer Descriptor Format:</strong></h3>
+<p>Although it is possible to DMA-read multiple 16-element vectors and store them
+vertically with a <em>single</em> configuration of <code>VPMVCD_RD_SETUP</code>, it is not
+possible to DMA-write multiple, 16-element, vertically-arranged vectors with
+a <em>single</em> configuration of <code>VPMVCD_WR_SETUP</code>.</p>
+<p>If such a DMA-write is attempted, say for exporting four vertically-stored
+vectors at <code>Y=0,X=15</code>, <code>Y=16,X=15</code>, <code>Y=32,X=15</code>, and <code>Y=48,X=15</code>, the DMA
+engine writes vectors residing at <code>Y=0,X=15</code>, <code>Y=16,X=0</code>, <code>Y=16,X=1</code>, and
+<code>Y=16,X=2</code> instead. That is, the DMA engine moves horizontally to the right,
+vector after vector, and down-to-up if the X coordinate overflows.</p>
+<p>Because of this problem, the <code>VPMVCD_WR_SETUP</code> must be separately configured
+for transferring each individual vector. The only changes that must be made in
+each successive transfer descriptor are the increment of the Y coordinate of
+the address to read the vector from, and the increment of the output address.</p>
+<p>Below is the transfer descriptor for transferring the first vector.
+In hexadecimal, the value is <code>0x80900078</code>.</p>
+<pre><code>|ID |UNITS   |DEPTH   |LANED |HORIZ |VPMBASE     |MODEW
+|10 |0000001 |0010000 |0     |0     |00000001111 |000
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>ID</code></td>
+          <td style="text-align: right"><code>10</code></td>
+          <td>Similar to <code>VPMVCD_RD_SETUP</code>. The bit distinguishes between the setup of a VPM-to-RAM write, and that of a QPU-to-VPM write.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>UNITS</code></td>
+          <td style="text-align: right"><code>0000001</code></td>
+          <td>Similar to <code>NROWS</code> from <code>VPMVCD_RD_SETUP</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>DEPTH</code></td>
+          <td style="text-align: right"><code>0010000</code></td>
+          <td>Similar to <code>ROWLEN</code> from <code>VPMVCD_RD_SETUP</code>. The value is in the units of the width selected in the <code>MODEW</code> field below.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>LANED</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Must be 0.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>HORIZ</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Since each vector lies vertically, the DMA controller must be told about the vertical orientation.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>VPMBASE</code></td>
+          <td style="text-align: right"><code>00000001111</code></td>
+          <td>Similar to <code>ADDRXY</code> from <code>VPMVCD_RD_SETUP</code>. The start address inside the VPM where the vectors reside; <code>Y=0,X=15</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>MODEW</code></td>
+          <td style="text-align: right"><code>000</code></td>
+          <td>Selects the element width as 32-bit.</td>
+      </tr>
+  </tbody>
+</table>
+<p>After each vector is transferred, the <code>Y</code> coordinate must be incremented by
+<code>16</code>. This amounts to adding <code>0x800</code> after every transfer. The vectors are to be
+stored into the output buffer in consecutive addresses; that requires
+incrementing the output address by <code>16 * 4 = 64</code>.</p>
+<hr>
+<h3 id="uniforms"><strong>Uniforms:</strong></h3>
+<p>The addresses of the input and output buffers are passed to the QPU program
+through a facility known as the
+<a href="https://www.khronos.org/opengl/wiki/Uniform_(GLSL)">uniforms</a>. It is usually
+utilized to pass such global pieces of information to the QPU; it is a
+read-only facility from the perspective of the QPU.</p>
+<p>The two buffer addresses are stored inside an array, and the address and the
+size of the array are written into <code>V3D_SRQUA</code> and <code>V3D_SRQUL</code> registers,
+respectively.</p>
+<p>The QPU program reads the <code>a32/b32</code> register, also named <code>UNIFORM_READ</code>,to gain
+access to the buffer addresses.</p>
+<hr>
+<h3 id="qpu-program"><strong>QPU Program:</strong></h3>
+<pre><code>li	vdr_setup, -, 0x8304080f;
+ori	vdr_addr, uni_rd, 0;
+or	-, vdr_wait, r0;
+
+# r0 has the setup descriptor.
+# r1 has the output address.
+# r2 is the counter
+
+li	r0, -, 0x80900078;
+ori	r1, uni_rd, 0;
+li	r2, -, 0;
+
+loop:
+subi	r3, r2, 4	sf;
+b.z	done;	# There's 3-instruction delay slot for a branch.
+;;;		# 3 NOPs to fill the slot.
+or	vdw_setup, r0, r0;
+or	vdw_addr, r1, r1;
+or	-, vdw_wait, r0;
+
+li	r3, -, 0x800;
+add	r0, r0, r3;	# Add 16 to Y coordinate: bits [13:7].
+b	loop;	# The following 3 instructions are executed as part of the branch
+		# delay slot.
+li	r3, -, 0x40;
+add	r1, r1, r3;	# Add 64 to the output address.
+addi	r2, r2, 1;	# Increment the counter.
+
+done:
+ori	host_int, 1, 1;
+pe;;;
+</code></pre>
+<p>The binary code.</p>
+<pre><code>0x8304080f, 0xe0020c67, // li	vdr_setup, -, 0x8304080f;
+0x15800dc0, 0xd0020ca7, // ori	vdr_addr, uni_rd, 0;
+0x15ca7c00, 0x100209e7, // or	-, vdr_wait, r0;
+
+0x80900078, 0xe0020827, // li	r0, -, 0x80900078;
+0x15800dc0, 0xd0020867, // ori	r1, uni_rd, 0;
+0x00000000, 0xe00208a7, // li	r2, -, 0;
+
+0x0d9c45c0, 0xd00228e7, // loop: subi	r3, r2, 4	sf;
+0x00000048, 0xf02809e7, // b.z	done;
+0x009e7000, 0x100009e7, // ;
+0x009e7000, 0x100009e7, // ;
+0x009e7000, 0x100009e7, // ;
+0x159e7000, 0x10021c67, // or	vdw_setup, r0, r0;
+0x159e7240, 0x10021ca7, // or	vdw_addr, r1, r1;
+0x159f2e00, 0x100209e7, // or	-, vdw_wait, r0;
+
+0x00000800, 0xe00208e7, // li	r3, -, 0x800;
+0x0c9e70c0, 0x10020827, // add	r0, r0, r3;
+0xffffff90, 0xf0f809e7, // b	loop;
+0x00000040, 0xe00208e7, // li	r3, -, 0x40;
+0x0c9e72c0, 0x10020867, // add	r1, r1, r3;
+0x0c9c15c0, 0xd00208a7, // addi	r2, r2, 1;
+
+0x159c1fc0, 0xd00209a7, // done: ori	host_int, 1, 1;
+0x009e7000, 0x300009e7, // pe;
+0x009e7000, 0x100009e7, // ;
+0x009e7000, 0x100009e7, // ;
+</code></pre>
+<hr>
+<h3 id="running-the-demo"><strong>Running the demo:</strong></h3>
+<p>The driver program can be found
+<a href="https://github.com/asurati/x03/blob/main/demo/d2.c">here</a>.</p>
+<p>A portion of a sample output:</p>
+<pre><code>v3dirqh: intctl 4, dbqitc 800
+
+d2: [0]: e64fec73, e64fec73
+d2: [1]: 7e04e730, 7e04e730
+d2: [2]: 25a73fa9, 25a73fa9
+. . .
+d2: [f]: 8636e692, 8636e692
+
+
+d2: [10]: 468cd863, 468cd863
+d2: [11]: 73787c60, 73787c60
+d2: [12]: 72726519, 72726519
+. . .
+d2: [1f]: 2421842, 2421842
+
+
+d2: [20]: 9e94a053, 9e94a053
+d2: [21]: e153bd90, e153bd90
+d2: [22]: a1c9c689, a1c9c689
+. . .
+d2: [2f]: 41515f2, 41515f2
+
+
+d2: [30]: 94d64443, 94d64443
+d2: [31]: 76d9aac0, 76d9aac0
+d2: [32]: bd3463f9, bd3463f9
+. . .
+d2: [3f]: e33adfa2, e33adfa2
+</code></pre>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

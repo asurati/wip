@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Categories on w-i-p</title>
+    <link>https://asurati.github.io/wip/categories/</link>
+    <description>Recent content in Categories on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 25 Oct 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/categories/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent of Code</title>
+      <link>https://asurati.github.io/wip/categories/advent-of-code/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/categories/advent-of-code/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Programming</title>
+      <link>https://asurati.github.io/wip/categories/programming/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/categories/programming/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Reversing</title>
+      <link>https://asurati.github.io/wip/categories/reversing/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/categories/reversing/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Tools</title>
+      <link>https://asurati.github.io/wip/categories/tools/</link>
+      <pubDate>Tue, 05 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/categories/tools/</guid>
+      <description></description>
+    </item>
+  </channel>
+</rss>

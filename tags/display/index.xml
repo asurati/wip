@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Display on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/display/</link>
+    <description>Recent content in Display on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 04 Jul 2023 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/display/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>vc4: cube demo - &#39;from scratch&#39;</title>
+      <link>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates a partial recreation of the&#xA;&lt;a href=&#34;https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/cube.c&#34;&gt;&lt;code&gt;vkcube&lt;/code&gt;&lt;/a&gt;&#xA;application, but&#xA;directly on the &lt;code&gt;vc4&lt;/code&gt; GPU, without involving any of the software graphics APIs.&#xA;It is a partial recreation, as the only behavior it demonstrates is a&#xA;&lt;a href=&#34;https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/lunarg.ppm.h&#34;&gt;&lt;code&gt;LunarG&lt;/code&gt;&lt;/a&gt;&#xA;cube, rotating on its Y-axis. &lt;code&gt;vkcube&lt;/code&gt; additionally supports speeding up or&#xA;slowing down the spinning cube, and reversing the direction of the spin.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>vc4: Winding Order</title>
+      <link>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</link>
+      <pubDate>Fri, 30 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates the effects of the triangle winding order on the render.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;preparation&#34;&gt;&lt;strong&gt;Preparation:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;RPi &lt;code&gt;vc4&lt;/code&gt; GPU, by default, assumes CCW winding order as denoting the front-face&#xA;of a triangle. The GPU also assumes that the start of the frame-buffer holds&#xA;the bottom-left pixel of the render. Effectively, the GPU adheres to a&#xA;typical Cartesian coordinate system - the bottom-left corner is the origin, and&#xA;the Y coordinate increases as it moves up.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>vc4: T-format Textures</title>
+      <link>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</link>
+      <pubDate>Tue, 27 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post describes the layout of the &lt;code&gt;vc4&lt;/code&gt; T-format textures.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;preparation&#34;&gt;&lt;strong&gt;Preparation:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;RPi &lt;code&gt;vc4&lt;/code&gt; GPU consumes textures that are either in &lt;code&gt;T-format&lt;/code&gt;, or in&#xA;&lt;code&gt;LT-format&lt;/code&gt;.&#xA;Quoting the &lt;a href=&#34;https://docs.broadcom.com/doc/12358545&#34;&gt;VideoCoreIV-AG100-R&lt;/a&gt;&#xA;reference guide:&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;The hardware automatically determines type of image (T-format or LT-format)&#xA;by looking at LOD dimensions. The hardware assumes a level is in T-format&#xA;unless either the width or height for the level is less than one T-format&#xA;tile. In this case use the hardware assumes the level is stored in LT-format.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: Texture</title>
+      <link>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates utilizing an image as a texture, to add details to the&#xA;surface of a square. The image is the one used&#xA;&lt;a href=&#34;https://vulkan-tutorial.com/Texture_mapping/Images&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;preparation&#34;&gt;&lt;strong&gt;Preparation:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The texture image is a JPEG of size 512x512. Extract the raw pixels in R8G8B8A8&#xA;format (equivalent to ABGR32, or 0xaabbggrr):&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code&gt;$ convert -size 512x512 -depth 8 texture.jpg RBGA:texture.bin&#xA;$ xxd -i texture.bin&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;The demo doesn&amp;rsquo;t yet have image-loading capability, hence the help being&#xA;requested from &lt;code&gt;xxd&lt;/code&gt; to convert the raw pixels into a C-style array that can be&#xA;easily inserted into the demo.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: MSAA 8x</title>
+      <link>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates the HD7350 support for MSAA rendering, through the use&#xA;of Color Mask and Fragment Mask, the former of which facilitates Fast Clear of&#xA;a render surface, and the latter, allows drawing on compressed MSAA surfaces.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;color-mask&#34;&gt;&lt;strong&gt;Color Mask:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The Color Mask, or CMask, is a buffer, of size corresponding to the size of the&#xA;target surface to which it is attached, which allows the GPU to mark the&#xA;target surface as clear, without having to actually write the pixels on to the&#xA;target surface. The state of the control bits stored in the CMask buffer allows&#xA;the GPU to mark corresponding regions of the target surface as clear.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: A Triangle</title>
+      <link>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</link>
+      <pubDate>Tue, 31 May 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</guid>
+      <description>&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update1&#34;&gt;Update #1&lt;/a&gt; on: 2nd June, 2022.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update2&#34;&gt;Update #2&lt;/a&gt; on: 5th June, 2022.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates setting up a HD7350 pipeline to draw a triangle.&#xA;The approach adopted here is that of choosing bare-metal programming over&#xA;relying on established interfaces like the Linux DRM.&#xA;That is not to say that Linux DRM&#xA;cannot be used - it is possible to send compute or rendering commands to the&#xA;GPU by directly interfacing with the DRM layer on Linux, or by moving up to an&#xA;even higher abstraction provided by OpenGL/Vulkan APIs.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>G73/NV4B demo: GPU Passthrough, and EDID access</title>
+      <link>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</link>
+      <pubDate>Fri, 22 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</guid>
+      <description>&lt;p&gt;This demo utilizes the &lt;a href=&#34;https://www.kernel.org/doc/Documentation/vfio.txt&#34;&gt;VFIO&lt;/a&gt;&#xA;feature of the Linux kernel to pass through a&#xA;&lt;a href=&#34;https://www.techpowerup.com/gpu-specs/geforce-7600-gt.c152&#34;&gt;GeForce 7600 GT&lt;/a&gt;&#xA;GPU to a guest VM running on the host. Then, the program running inside the&#xA;guest VM configures a DDC (an I&lt;sup&gt;2&lt;/sup&gt;C) bus on the GPU to access the&#xA;EDID blocks of the attached display.&lt;/p&gt;&#xA;&lt;p&gt;The details about parsing the Video BIOS, and about driving the DDC bus were&#xA;found by reading the&#xA;&lt;a href=&#34;http://download.nvidia.com/open-gpu-doc/DCB/1/DCB-4.0-Specification.html&#34;&gt;DCB Specification&lt;/a&gt;&#xA;and, the source code for the&#xA;&lt;a href=&#34;https://lxr.missinglinkelectronics.com/linux/drivers/gpu/drm/nouveau/&#34;&gt;&lt;code&gt;nouveau&lt;/code&gt;&lt;/a&gt;&#xA;driver.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Driving the HDMI Display Pipeline</title>
+      <link>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</guid>
+      <description>&lt;p&gt;The demos have been relying on the firmware to setup the HDMI display pipeline&#xA;and to provide them with a frame buffer to draw on.&lt;/p&gt;&#xA;&lt;p&gt;The program found &lt;a href=&#34;https://github.com/asurati/x03/blob/main/dev/disp.c&#34;&gt;here&lt;/a&gt;&#xA;attempts to take the control of the pipeline from the firmware, and run it&#xA;on its own.&lt;/p&gt;&#xA;&lt;p&gt;Because of the lack of documentation, the Linux &lt;code&gt;vc4&lt;/code&gt; driver was consulted&#xA;to determine the registers to setup and the sequence of steps necessary, to&#xA;disable and enable the pipeline.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Pixel Clock: PLLH_PIX</title>
+      <link>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</link>
+      <pubDate>Thu, 14 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</guid>
+      <description>&lt;p&gt;This post investigates the programming of the HDMI &lt;code&gt;pixel&lt;/code&gt; clock, performed by&#xA;the RPi firmware to push the pixels into the HDMI encoder at that frequency.&lt;/p&gt;&#xA;&lt;p&gt;Booting with the RPi firmware and the U-Boot, the actual resolution of the&#xA;display is 1920x1080@60Hz. The resolution of the frame buffer might be lower -&#xA;the HVS takes care of appropriately scaling and positioning the pixels.&lt;/p&gt;&#xA;&lt;p&gt;Below is the &lt;code&gt;Modeline&lt;/code&gt; details about the 1920x1080@60Hz resolution. These&#xA;details were extracted out of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Extended_Display_Identification_Data&#34;&gt;EDID&lt;/a&gt; information gathered from the monitor:&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

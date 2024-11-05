@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CPP: Macro Replacement: Page 182, EXAMPLE 3 | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">CPP: Macro Replacement: Page 182, EXAMPLE 3</span></h1>
+
+<h2 class="date">2023/08/09</h2>
+</div>
+
+<main>
+<p>This post explains the EXAMPLE 3 given on Page# 182
+(page# that would be found printed on the page of a paper-copy, not the one
+displayed on a pdf reader application) of the working draft,
+dated April 1, 2023, of the
+<a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf">C2X</a>
+standard.</p>
+<hr>
+<pre><code class="language-c">#define x 3
+#define f(a) f(x * (a))
+#undef x
+#define x 2
+#define g f
+#define z z[0]
+#define h g(\~{ }
+#define m(a) a(w)
+#define w 0,1
+#define t(a) a
+#define p() int
+#define q(x) x
+#define r(x,y) x ## y
+#define str(x) # x
+f(y+1) + f(f(z)) % t(t(g)(0) + t)(1);
+g(x+(3,4)-w) | h 5) &amp; m
+(f)^m(m);
+p() i[q()] = { q(1), r(2,3), r(4,), r(,5), r(,) };
+char c[2][6] = { str(hello), str() };
+</code></pre>
+<hr>
+<h3 id="insexpansion-of-fy1ins"><ins>Expansion of <code>f(y+1)</code></ins></h3>
+<p>The CPP pushes on the currently empty <code>active-macro-stack-#0</code> an entry
+corresponding to the invocation <code>f(y+1)</code>:</p>
+<pre><code>    // active-macro-stack-#0
+
+    f(y+1)    &lt;---- bottom of the stack
+    -----------------------------------
+</code></pre>
+<p>The argument <code>y+1</code> is expanded to itself, since the identifier <code>y</code> isn&rsquo;t the
+name of any macro, and the symbols <code>+</code> and <code>1</code> are not subject to expansion.</p>
+<p>After argument-substitution, the state is:</p>
+<pre><code>    f(y+1)    (rest is: + f(f(z)) % . . .)
+    +-----
+    | after arg-substitution
+    v-----------
+    f(x * (y+1))
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>f(x * (y+1))</code>. The identifier <code>f</code>
+matches with the name of an active macro, <code>f</code> itself, as evident from the state
+of the <code>active-macro-stack-#0</code>. Hence, this token for the
+identifier <code>f</code> is marked for non-replacement. In this post, such marked
+identifiers are written in <code>CAPITAL</code>. The current state of expansion is:</p>
+<pre><code>    f(y+1)    (rest is: + f(f(z)) % . . .)
+    +-----
+    | after arg-substitution
+    v-----------
+    f(x * (y+1))
+    F(x * (y+1))    &lt;--- mark f for non-replacement
+</code></pre>
+<p>Since <code>F</code> is marked for non-replacement, the token-sequence <code>(x * (y+1))</code> isn&rsquo;t
+considered to be a part of an invocation of the macro <code>f</code>. The CPP moves ahead
+and reaches <code>x</code>. Although a macro named <code>x</code> is defined, undefined and then
+redefined, the definition that is active is the latest one lexically
+before the tokens currently being expanded. Accordingly, <code>x</code> is expanded to
+<code>2</code>, as shown below.</p>
+<p>The identifier <code>x</code> is the name of an obj-like macro. It also doesn&rsquo;t match with
+the name of any active macro, as evident from the state of the
+<code>active-macro-stack-#0</code>. Hence, this token for the identifier <code>x</code> is allowed
+replacement. The CPP pushes on to the <code>active-macro-stack-#0</code>
+an entry for the macro-invocation <code>x</code>:</p>
+<pre><code>    // active-macro-stack-#0
+
+    x         &lt;---- top of the stack
+    f(y+1)    &lt;---- bottom of the stack
+    -----------------------------------
+</code></pre>
+<p>The replacement-list of the macro <code>x</code> is just <code>2</code>:</p>
+<pre><code>    f(y+1)    (rest is: + f(f(z)) % . . .)
+    +-----
+    | after arg-substitution
+    v-----------
+    F(x * (y+1))    &lt;--- mark f for non-replacement
+      +
+      |
+      v
+      2
+</code></pre>
+<p>The CPP now rescans the token <code>2</code>. The token isn&rsquo;t subject to replacement.
+Thus, the expansion of the macro-invocation <code>x</code> is <code>2</code>. The CPP will move out
+of the boundaries of the replacement-list of the macro-invocation <code>x</code>, with no
+other processing related to that invocation pending. The corresponding entry
+within the <code>active-macro-stack-#0</code> is popped off.</p>
+<p>The state is:</p>
+<pre><code>    // active-macro-stack-#0
+
+    f(y+1)    &lt;---- bottom of the stack
+    -----------------------------------
+</code></pre>
+<pre><code>    f(y+1)    (rest is: + f(f(z)) % . . .)
+    +-----
+    | after arg-substitution
+    v-----------
+    f(x * (y+1))
+    F(x * (y+1))    &lt;--- mark f for non-replacement
+    F(2 * (y+1))    &lt;--- replace x by 2
+</code></pre>
+<p>The token-sequence <code>* (y+1))</code> remains as it is. With that, the CPP now moves
+out of the boundaries of the replacement-list of the macro-invocation <code>f(y+1)</code>,
+with no other processing related to that invocation pending. The corresponding
+entry within the <code>active-macro-stack-#0</code> is popped off, and the stack is now
+empty.</p>
+<p>The output at this stage is: <code>F(2 * (y+1))</code>.</p>
+<p>(Note that the capital letters only declare that the token was
+marked for non-replacement. The actual output of a CPP implementation will be
+<code>f(2 * (y+1))</code>.)</p>
+<p>The <code>rest</code> begins with <code>+</code>. That symbol is output as it is. Then follows the
+invocation <code>f(f(z))</code>.</p>
+<hr>
+<h3 id="insexpansion-of-ffzins"><ins>Expansion of <code>f(f(z))</code></ins></h3>
+<p>The CPP pushes on to the now empty <code>active-macro-stack-#0</code> an entry
+corresponding to the invocation <code>f(f(z))</code>.</p>
+<pre><code>    // active-macro-stack-#0
+
+    f(f(z))    &lt;---- bottom of the stack
+    ------------------------------------
+</code></pre>
+<pre><code>    f(f(z))    (rest is: % t(t(g) . . .)
+    +------
+</code></pre>
+<p>The argument is <code>f(z)</code>. It must be fully expanded, over a new
+active-macro-stack, before proceeding.</p>
+<hr>
+<h4 id="expansion-of-fz">Expansion of <code>f(z)</code></h4>
+<p>The CPP pushes on to a new <code>active-macro-stack-#1</code> an entry
+corresponding to the invocation <code>f(z)</code>.</p>
+<pre><code>    // active-macro-stack-#1
+
+    f(z)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<pre><code>    f(z)    (rest is: % t(t(g) . . .)
+    +---
+</code></pre>
+<p>The argument is <code>z</code>, which is the name of an object-like macro. It must
+be fully expanded, over a new active-macro-stack, before proceeding.</p>
+<hr>
+<h4 id="expansion-of-z">Expansion of <code>z</code></h4>
+<p>The CPP pushes on to a new <code>active-macro-stack-#2</code> an entry
+corresponding to the invocation <code>z</code>.</p>
+<pre><code>    // active-macro-stack-#2
+
+    z    &lt;---- bottom of the stack
+    ------------------------------
+</code></pre>
+<p>Now towards expanding <code>z</code>:</p>
+<pre><code>    z   (rest is:  empty)
+    +
+    | after substitution
+    v---
+    z[0]
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>z[0]</code>. The identifier <code>z</code> matches the
+name of an active macro, <code>z</code> itself, as evident from the
+<code>active-macro-stack-#2</code>. Hence, this token of the identifier <code>z</code> is marked for
+non-replacement. Note that this token will be substituted in the expansions of
+<code>f(z)</code> and of <code>f(f(z))</code>. These substitutions do not change the fact that this
+token is marked for non-replacement. The rescanning that will occur once the
+processing of macros <code>f(z)</code> and <code>f(f(z))</code> resumes will not expand this token.
+The mark is persistent.</p>
+<pre><code>    z   (rest is:  empty)
+    +
+    | after substitution
+    v---
+    z[0]
+    Z[0]    &lt;--- mark z for non-replacement
+</code></pre>
+<p>The token-sequence <code>[0]</code> is output as it is, without change. With that, the CPP
+moves out of the boundaries of the replacement-list of the macro-invocation
+<code>z</code>, with no other processing for that invocation pending. The corresponding
+entry within the <code>active-macro-stack-#2</code> is popped off; the stack is now empty.</p>
+<hr>
+<h4 id="expansion-of-fz-continues">Expansion of <code>f(z)</code> continues</h4>
+<pre><code>    // active-macro-stack-#1
+
+    f(z)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<p>The fully expanded argument is substituted into the replacement-list of the
+macro <code>f</code>:</p>
+<pre><code>    f(z)    (rest is:   % t(t(g) . . .)
+    +---
+    | after arg-substitution
+    v--------------
+    f(x * (Z[0]+1))
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>f(x * (Z[0]+1))</code>. Since the identifier
+<code>f</code> matches with the name of an active macro, <code>f</code> itself, as evident
+from the <code>active-macro-stack-#1</code>, this token for the identifier <code>f</code> is marked
+for non-replacement. Note that this token will make its way through to the
+replacement-list of <code>f(f(z))</code>; even there this token will remain
+non-replaceable.</p>
+<pre><code>    f(z)    (rest is:   % t(t(g) . . .)
+    +---
+    | after arg-substitution
+    v--------------
+    f(x * (Z[0]+1))
+    F(x * (Z[0]+1))    &lt;--- mark f for non-replacement
+</code></pre>
+<p>The token-sequence <code>(x * (Z[0]+1))</code> therefore doesn&rsquo;t form a macro-invocation
+of the macro <code>f</code>.</p>
+<p>Since the identifier <code>x</code> doesn&rsquo;t match with the name of any active
+macro, as evident from the state of the <code>active-macro-stack-#1</code>, it is allowed
+to be replaced. Its replacement is just <code>2</code>.</p>
+<pre><code>    f(z)    (rest is:   % t(t(g) . . .)
+    +---
+    | after arg-substitution
+    v--------------
+    f(x * (Z[0]+1))
+    F(x * (Z[0]+1))    &lt;--- mark f for non-replacement
+    F(2 * (Z[0]+1))    &lt;--- replace x by 2
+</code></pre>
+<p>Since the identifier <code>z</code> is marked for non-replacement, it is not considered
+for replacement.</p>
+<p>The CPP now moves out of the boundaries of the replacement-list of the
+macro-invocation <code>f(z)</code>, with no other processing for that invocation pending.
+The corresponding entry within the <code>active-macro-stack-#1</code> is popped off;
+the stack is now empty.</p>
+<p>The output at this stage is: <code>F(2 * (Z[0]+1))</code>.</p>
+<hr>
+<h3 id="insexpansion-of-ffz-continuesins"><ins>Expansion of <code>f(f(z))</code> continues</ins></h3>
+<pre><code>    // active-macro-stack-#0
+
+    f(f(z))    &lt;---- bottom of the stack
+    ------------------------------------
+</code></pre>
+<pre><code>    f(f(z))     (rest is:   % t(t(g) . . .)
+    +------
+</code></pre>
+<p>The fully expanded argument is substituted into the replacement-list of the
+macro <code>f</code>:</p>
+<pre><code>    f(f(z))     (rest is:   % t(t(g) . . .)
+    +------
+    | after arg-subsitution
+    v-----------------------
+    f(x * (F(2 * (Z[0]+1))))
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>f(x * F(2 * (Z[0]+1)))</code>. The first
+identifier <code>f</code> matches the name of an active macro, <code>f</code> itself, as evident from
+the <code>active-macro-stack-#0</code>. Hence, this token for the identifier <code>f</code> is marked
+for non-replacement.</p>
+<pre><code>    f(f(z))     (rest is:   % t(t(g) . . .)
+    +------
+    | after arg-subsitution
+    v-----------------------
+    f(x * (F(2 * (Z[0]+1))))
+    F(x * (F(2 * (Z[0]+1))))    &lt;--- mark f for non-replacement
+</code></pre>
+<p>Since the identifier <code>x</code> doesn&rsquo;t match with the name of any active
+macro, as evident from the state of the <code>active-macro-stack-#1</code>, it is allowed
+to be replaced. Its replacement is just <code>2</code>.</p>
+<pre><code>    f(f(z))     (rest is:   % t(t(g) . . .)
+    +------
+    | after arg-subsitution
+    v-----------------------
+    f(x * (F(2 * (Z[0]+1))))
+    F(x * (F(2 * (Z[0]+1))))    &lt;--- mark f for non-replacement
+    F(2 * (F(2 * (Z[0]+1))))    &lt;--- replace x by 2
+</code></pre>
+<p>The CPP now moves out of the boundaries of the replacement-list of the
+macro-invocation <code>f(f(z))</code>, with no other processing for that macro pending.
+The corresponding entry within the <code>active-macro-stack-#0</code> is popped off;
+the stack is now empty.</p>
+<p>The cumulative output until now is:</p>
+<p><code>F(2 * (y+1)) +  F(2 * (F(2 * (Z[0]+1))))</code>.</p>
+<p>The <code>rest</code> begins with <code>%</code>. That symbol is output as it is. Then follows the
+invocation <code>t(t(g)(0) + t)</code>, with <code>(1); . . .</code> as the <code>rest</code>.</p>
+<hr>
+<h3 id="insexpansion-of-ttg0--tins"><ins>Expansion of <code>t(t(g)(0) + t)</code></ins></h3>
+<p>The CPP pushes on to the now empty <code>active-macro-stack-#0</code> an entry
+corresponding to the macro-invocation <code>t(t(g)(0) + t)</code></p>
+<pre><code>    // active-macro-stack-#0
+
+    t(t(g)(0) + t)    &lt;---- bottom of the stack
+    -------------------------------------------
+</code></pre>
+<pre><code>    t(t(g)(0) + t)      (rest is: (1); . . .)
+    +-------------
+</code></pre>
+<p>The argument is <code>t(g)(0) + t</code>. It must first be fully expanded,
+over a new active-macro-stack, before proceeding.</p>
+<hr>
+<h4 id="expansion-of-tg0--t">Expansion of <code>t(g)(0) + t</code></h4>
+<p>The CPP pushes on to a new <code>active-macro-stack-#3</code> an entry corresponding to
+the invocation <code>t(g)</code>, with <code>(0) + t</code> as <code>rest</code>.</p>
+<pre><code>    // active-macro-stack-#3
+
+    t(g)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<pre><code>    t(g)    (rest is:   (0) + t)
+    +---
+</code></pre>
+<p>The argument is <code>g</code>, which is the name of an object-like macro.
+It must be fully expanded, over a new active-macro-stack, before
+proceeding.</p>
+<hr>
+<h4 id="expansion-of-g">Expansion of <code>g</code></h4>
+<p>The CPP pushes on to a new <code>active-macro-stack-#4</code> an entry corresponding to
+the invocation <code>g</code></p>
+<pre><code>    // active-macro-stack-#4
+
+    g    &lt;---- bottom of the stack
+    ------------------------------
+</code></pre>
+<pre><code>    g   (rest is:  empty)
+    +
+</code></pre>
+<p>Now towards expanding <code>g</code>:</p>
+<pre><code>    g   (rest is:  empty)
+    +
+    | after substitution
+    v
+    f
+</code></pre>
+<p>The expansion of <code>g</code> is <code>f</code>. The CPP now rescans the token <code>f</code>. The identifier
+<code>f</code> does not match with the name of any active macro, as evident from the
+<code>active-macro-stack-#4</code>. Hence, this token for the identifier <code>f</code> is allowed
+replacement. The identifier <code>f</code> matches with the name of a function-like macro,
+but the <code>rest</code> here is empty. The CPP now moves out of the boundaries of the
+replacement-list of the macro-invocation <code>g</code>. The corresponding entry within
+the <code>active-macro-stack-#0</code> is popped off;the stack is now empty.</p>
+<hr>
+<h4 id="expansion-of-tg0--t-continues">Expansion of <code>t(g)(0) + t</code> continues</h4>
+<pre><code>    // active-macro-stack-#3
+
+    t(g)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<p>The fully expanded argument is substituted into the replacement-list of the
+macro <code>t</code>:</p>
+<pre><code>    t(g)    (rest is: (0) + t)
+    +---
+    | after arg-substitution.
+    v
+    f
+</code></pre>
+<p>The CPP now rescans the token <code>f</code>. It arrived from the expansion of the
+argument <code>g</code>, with its ability to be replaced intact. The identifier
+<code>f</code> doesn&rsquo;t match with the name of any active macro, as evident from the
+state of the <code>active-macro-stack-#3</code>.</p>
+<p>The identifier <code>f</code> matches the name of a function-like macro, and looking ahead
+into the <code>rest</code>, the CPP can construct a complete invocation of
+that macro in the form <code>f(0)</code>. Here the point of ambiguity, as described in the
+<a href="http://localhost:1313/wip/post/2023/08/07/cpp-nested-replacement-ambiguity">post</a>,
+arises. Choosing <a href="http://localhost:1313/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/#option-1">Option 1</a>,
+the identifier <code>f</code> is donated out
+of the influence of the <code>t(g)</code> macro-invocation. As a result, the entry
+corresponding to the invocation <code>t(g)</code> is popped off the
+<code>active-macro-stack-#3</code> and an entry corresponding to the invocation <code>f(0)</code> is
+pushed:</p>
+<pre><code>    // active-macro-stack-#3
+
+    f(0)    &lt;---- bottom of the stack
+    ---------------------------------
+</code></pre>
+<pre><code>    f(0)    (rest is: + t)
+    +---
+</code></pre>
+<p>After argument-substitution:</p>
+<pre><code>    f(0)    (rest is: + t)
+    +---
+    | after arg-substitution
+    v---------
+    f(x * (0))
+</code></pre>
+<p>The process now follows similar to other expansions of the macro <code>f</code> described
+above:</p>
+<pre><code>    f(0)    (rest is: + t)
+    +---
+    | after arg-substitution
+    v---------
+    f(x * (0))
+    F(x * (0))    &lt;--- mark f for non-replacement
+    F(2 * (0))    &lt;--- replace x by 2
+</code></pre>
+<p>With this, the CPP moves out of the boundaries of the replacement-list of the
+macro-invocation <code>f(0)</code>. The corresponding entry within
+the <code>active-macro-stack-#3</code> is popped off; the stack is now empty.</p>
+<p>The <code>rest</code> consists of token-sequence <code>+ t</code>. That sequence is expanded as is.
+The identifier <code>t</code> does not match with the name of any active macro,
+as evident by the <code>active-macro-stack-#3</code>; the stack is empty. It does match
+with the name of the macro <code>t</code>, but the macro is function-like, and here
+there&rsquo;s nothing beyond <code>t</code> in the invocation. Hence, the token for the
+identifier <code>t</code> is allowed replacement during further rescanning.</p>
+<p>The output is: <code>F(2 * (0)) + t</code>.</p>
+<p>The cumulative output until now is:</p>
+<p><code>F(2 * (y+1)) +  F(2 * (F(2 * (Z[0]+1)))) % F(2 * (0)) + t</code>.</p>
+<hr>
+<h3 id="insexpansion-of-ttg0--t-continuesins"><ins>Expansion of <code>t(t(g)(0) + t)</code> continues</ins></h3>
+<pre><code>    // active-macro-stack-#0
+
+    t(t(g)(0) + t)    &lt;---- bottom of the stack
+    -------------------------------------------
+</code></pre>
+<p>The fully expanded argument is substituted into the replacement-list of the
+macro <code>t</code>:</p>
+<pre><code>    t(t(g)(0) + t)  (rest is: (1); . . .)
+    +-------------
+    | after arg-substitution
+    v-------------
+    F(2 * (0)) + t
+</code></pre>
+<p>The CPP now rescans the token-sequences <code>F(2 * (0)) + t</code>. The identifier <code>f</code>
+is already marked for no-replacement. The identifier <code>t</code> matches the name of an
+active macro, <code>t</code> itself, as evident from the state of the
+<code>active-macro-stack-#0</code>. Hence this token for the identifier <code>t</code> is marked for
+non-replacement.</p>
+<pre><code>    t(t(g)(0) + t)  (rest is: (1); . . .)
+    +-------------
+    | after arg-substitution
+    v-------------
+    F(2 * (0)) + t
+    F(2 * (0)) + T    &lt;--- mark t for non-replacement
+</code></pre>
+<p>The CPP now moves out of the boundaries of the replacement-list of the
+macro-invocation <code>t(t(g)(0) + t)</code>. The corresponding entry within the
+<code>active-macro-stack-#0</code> is popped off; the stack becomes empty.</p>
+<p>The <code>rest</code> is <code>(1);&lt;new-line&gt;g(x+ . . . </code>. The next macro-invocation is for
+the macro <code>g</code>.</p>
+<p>The cumulative output until now is:</p>
+<p><code>F(2 * (y+1)) +  F(2 * (F(2 * (Z[0]+1)))) % F(2 * (0)) + T(1);&lt;new-line&gt;</code>.</p>
+<hr>
+<h3 id="insexpansion-of-gx34-wins"><ins>Expansion of <code>g(x+(3,4)-w)</code></ins></h3>
+<p>The CPP pushes on to the now empty <code>active-macro-stack-#0</code> an entry
+corresponding to the invocation <code>g(x+(3,4)-w)</code>.</p>
+<pre><code>    // active-macro-stack-#0
+
+    g(x+(3,4)-w)    &lt;---- bottom of the stack
+    -----------------------------------------
+</code></pre>
+<pre><code>    g(x+(3,4)-w)    (rest is:  | h 5 . . .)
+    +-----------
+</code></pre>
+<p>After argument-substitution:</p>
+<pre><code>    g(x+(3,4)-w)    (rest is:  | h 5 . . .)
+    +-----------
+    | after arg-substitution
+    v-------------
+    f(2+(3,4)-0,1)
+</code></pre>
+<p>The CPP now rescans the token-sequence <code>f(2+(3,4)-0,1)</code>. The identifier <code>f</code>
+does not match with the name of any active macro, as evident by the state of
+the <code>active-macro-stack-#0</code>. Hence, this token for the identifier <code>f</code> is
+eligible for replacement.</p>
+<p>The token-sequence corresponds to a complete invocation of the macro <code>f</code>,
+without looking ahead into the <code>rest</code> of the source file.</p>
+<p>The CPP therefore pushes an entry on to the <code>active-macro-stack-#0</code>
+corresponding to the invocation <code>f(2+(3,4)-0,1)</code>.</p>
+<pre><code>    // active-macro-stack-#0
+
+    f(2+(3,4)-0,1)    &lt;--- top of the stack
+    g(x+(3,4)-w)      &lt;--- bottom of the stack
+    ------------------------------------------
+</code></pre>
+<p>After argument expansion and substitution:</p>
+<pre><code>    f(2+(3,4)-0,1)    (rest is: | h 5 . . .)
+    +-------------
+    | after arg-substitution
+    v-------------------
+    f(x * (2+(3,4)-0,1))
+</code></pre>
+<p>After rescanning:</p>
+<pre><code>    f(2+(3,4)-0,1)    (rest is: | h 5 . . .)
+    +-------------
+    | after arg-substitution
+    v-------------------
+    f(x * (2+(3,4)-0,1))
+    F(x * (2+(3,4)-0,1))    &lt;--- mark f for non-replacement
+    F(2 * (2+(3,4)-0,1))    &lt;--- replace x by 2
+</code></pre>
+<p>With this, the CPP moves out of the boundaries of the replacement-list of the
+macro-invocation <code>f(2+(3,4)-0,1)</code>. The corresponding entry within the
+<code>active-macro-stack-#0</code> is popped off.</p>
+<pre><code>    // active-macro-stack-#0
+
+    g(x+(3,4)-w)      &lt;--- bottom of the stack
+    ------------------------------------------
+</code></pre>
+<p>But with that, the CPP also moves out of the boundaries of the
+replacement-list of the macro-invocation <code>g(x+(3,4)-w)</code>.
+The corresponding entry on the <code>active-macro-stack-#0</code> is popped off;
+the stack is now empty.</p>
+<p>The cumulative output until now is:</p>
+<p><code>F(2 * (y+1)) +  F(2 * (F(2 * (Z[0]+1)))) % F(2 * (0)) + T(1);</code><br>
+<code>F(2 * (2+(3,4)-0,1))</code>.</p>
+<p>The <code>rest</code> begins with <code>|</code>. That symbol is output as is. The <code>rest</code> is now
+<code>h 5) &amp; m . . .</code>.</p>
+<hr>
+<h3 id="insexpansion-of-hins"><ins>Expansion of <code>h</code></ins></h3>
+<p>In short:</p>
+<pre><code>    // active-macro-stack-#0
+
+    h    &lt;--- bottom of the stack
+    -----------------------------
+</code></pre>
+<pre><code>    h    (rest is: 5) &amp; m . . .)
+    +
+    | after substitution
+    v------
+    g(\~{ }
+</code></pre>
+<p>After rescanning, and choosing
+<a href="http://localhost:1313/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/#option-1">Option 1</a>:</p>
+<pre><code>    // active-macro-stack-#0
+
+    g(\~{ } 5)    &lt;--- bottom of the stack
+    --------------------------------------
+</code></pre>
+<pre><code>    g(\~{ } 5)    (rest is: &amp; m (f) . . .)
+    +---------
+    | after arg-substitution
+    v---------
+    f(\~{ } 5)
+</code></pre>
+<p>After rescanning,</p>
+<pre><code>    // active-macro-stack-#0
+
+    f(\~{ } 5)    &lt;--- top of the stack
+    g(\~{ } 5)    &lt;--- bottom of the stack
+    --------------------------------------
+</code></pre>
+<pre><code>    g(\~{ } 5)    (rest is: &amp; m (f) . . .)
+    +---------
+    | after arg-substitution
+    v---------
+    f(\~{ } 5)
+    +---------
+    | after arg-substitution
+    v---------------
+    f(x * (\~{ } 5))
+</code></pre>
+<p>After rescanning,</p>
+<pre><code>    g(\~{ } 5)    (rest is: &amp; m (f) . . .)
+    +---------
+    | after arg-substitution
+    v---------
+    f(\~{ } 5)
+    +---------
+    | after arg-substitution
+    v---------------
+    f(x * (\~{ } 5))
+    F(x * (\~{ } 5))    &lt;--- marking f for non-replacement
+    F(2 * (\~{ } 5))    &lt;--- replacing x by 2
+</code></pre>
+<p>The CPP moves out of the boundaries of the replacement-lists of both the
+macro-invocations <code>f(\~{ } 5)</code> and <code>g(\~{ }5)</code>.
+The <code>active-macro-stack-#0</code> becomes empty.</p>
+<p>The cumulative output until now is:</p>
+<p><code>F(2 * (y+1)) +  F(2 * (F(2 * (Z[0]+1)))) % F(2 * (0)) + T(1);</code><br>
+<code>F(2 * (2+(3,4)-0,1)) | F(2 * (\~{ } 5))</code>.</p>
+<p>The <code>rest</code> consists of <code>&amp; m (f)^m(m); . . .</code>.</p>
+<hr>
+<h3 id="insexpansion-of-mfins"><ins>Expansion of <code>m(f)</code></ins></h3>
+<p>In short:</p>
+<pre><code>    // active-macro-stack-#0
+
+    m(f)    &lt;--- bottom of the stack
+    --------------------------------
+</code></pre>
+<pre><code>    m(f)    (rest is: ^m(m); . . .)
+    +---
+    | after arg-substitution
+    v---
+    f(w)
+</code></pre>
+<p>The identifier <code>f</code> is allowed replacement. The argument <code>w</code> is expanded to
+<code>0,1</code>.</p>
+<pre><code>    // active-macro-stack-#0
+
+    f(w)    &lt;--- top of the stack
+    m(f)    &lt;--- bottom of the stack
+    --------------------------------
+</code></pre>
+<pre><code>    m(f)    (rest is: ^m(m); . . .)
+    +---
+    | after arg-substitution
+    v---
+    f(w)
+    +---
+    | after arg-substitution
+    v-----------
+    f(x * (0,1))
+</code></pre>
+<p>After rescanning,</p>
+<pre><code>    m(f)    (rest is: ^m(m); . . .)
+    +---
+    | after arg-substitution
+    v---
+    f(w)
+    +---
+    | after arg-substitution
+    v-----------
+    f(x * (0,1))
+    F(x * (0,1))    &lt;--- mark f for non-replacement
+    F(2 * (0,1))    &lt;--- replace x by 2
+</code></pre>
+<p>The CPP now moves out of the boundaries of the replacement-list of both the
+macro-invocations <code>f(w)</code> and <code>m(f)</code>. The <code>active-macro-stack-#0</code> is now empty.</p>
+<p>The cumulative output until now is:</p>
+<p><code>F(2 * (y+1)) +  F(2 * (F(2 * (Z[0]+1)))) % F(2 * (0)) + T(1);</code><br>
+<code>F(2 * (2+(3,4)-0,1)) | F(2 * (\~{ } 5)) &amp; F(2 * (0,1))</code>.</p>
+<p>The <code>rest</code> consists of <code>^m(m); . . .</code></p>
+<hr>
+<h3 id="insexpansion-of-mmins"><ins>Expansion of <code>m(m)</code></ins></h3>
+<p>In short:</p>
+<pre><code>    // active-macro-stack-#0
+
+    m(m)    &lt;--- bottom of the stack
+    --------------------------------
+</code></pre>
+<pre><code>    m(m)    (rest is: ^m(m); . . .)
+    +---
+    | after arg-substitution
+    v---
+    m(w)
+    +---
+    | after arg-substitution
+    v-----
+    m(0,1)
+    M(0,1)    &lt;--- mark m for non-replacement.
+</code></pre>
+<p>The argument <code>w</code> is expanded to <code>0,1</code>. The identifier <code>m</code> is marked to prevent
+replacement.</p>
+<p>The CPP now moves out of the boundaries of the replacement-list of the
+macro-invocation <code>m(m)</code>. The <code>active-macro-stack-#0</code> is now empty.</p>
+<p>The cumulative output until now is:</p>
+<p><code>F(2 * (y+1)) +  F(2 * (F(2 * (Z[0]+1)))) % F(2 * (0)) + T(1);</code><br>
+<code>F(2 * (2+(3,4)-0,1)) | F(2 * (\~{ } 5)) &amp; F(2 * (0,1))^M(0,1);</code>.</p>
+<p>The <code>rest</code> still has two source lines worth of macro invocations, but they are
+simple enough.</p>
+<hr>
+<h3 id="insconclusionins"><ins>Conclusion</ins></h3>
+<p>The argument expansions run on separate active-macro-stacks. Any token that is
+marked for non-replacement within the tokens of the argument expansion, retains
+its mark, even if substituted into parent-constructs&rsquo; replacement-lists and
+then rescanned.</p>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

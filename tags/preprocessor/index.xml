@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Preprocessor on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/preprocessor/</link>
+    <description>Recent content in Preprocessor on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Wed, 09 Aug 2023 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/preprocessor/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>CPP: Macro Replacement: Page 182, EXAMPLE 3</title>
+      <link>https://asurati.github.io/wip/post/2023/08/09/cpp-macro-replacement-page-182-example-3/</link>
+      <pubDate>Wed, 09 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/09/cpp-macro-replacement-page-182-example-3/</guid>
+      <description>&lt;p&gt;This post explains the EXAMPLE 3 given on Page# 182&#xA;(page# that would be found printed on the page of a paper-copy, not the one&#xA;displayed on a pdf reader application) of the working draft,&#xA;dated April 1, 2023, of the&#xA;&lt;a href=&#34;https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf&#34;&gt;C2X&lt;/a&gt;&#xA;standard.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;#define x 3&#xA;#define f(a) f(x * (a))&#xA;#undef x&#xA;#define x 2&#xA;#define g f&#xA;#define z z[0]&#xA;#define h g(\~{ }&#xA;#define m(a) a(w)&#xA;#define w 0,1&#xA;#define t(a) a&#xA;#define p() int&#xA;#define q(x) x&#xA;#define r(x,y) x ## y&#xA;#define str(x) # x&#xA;f(y+1) + f(f(z)) % t(t(g)(0) + t)(1);&#xA;g(x+(3,4)-w) | h 5) &amp;amp; m&#xA;(f)^m(m);&#xA;p() i[q()] = { q(1), r(2,3), r(4,), r(,5), r(,) };&#xA;char c[2][6] = { str(hello), str() };&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;insexpansion-of-fy1ins&#34;&gt;&lt;ins&gt;Expansion of &lt;code&gt;f(y+1)&lt;/code&gt;&lt;/ins&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The CPP pushes on the currently empty &lt;code&gt;active-macro-stack-#0&lt;/code&gt; an entry&#xA;corresponding to the invocation &lt;code&gt;f(y+1)&lt;/code&gt;:&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>CPP: Macro Replacement: Page 179, EXAMPLE 1</title>
+      <link>https://asurati.github.io/wip/post/2023/08/08/cpp-macro-replacement-page-179-example-1/</link>
+      <pubDate>Tue, 08 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/08/cpp-macro-replacement-page-179-example-1/</guid>
+      <description>&lt;p&gt;This post explains the EXAMPLE 1 given on Page# 179&#xA;(page# that would be found printed on the page of a paper-copy, not the one&#xA;displayed on a pdf reader application) of the working draft,&#xA;dated April 1, 2023, of the&#xA;&lt;a href=&#34;https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf&#34;&gt;C2X&lt;/a&gt;&#xA;standard.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;page-179-example-1&#34;&gt;&lt;strong&gt;Page 179, EXAMPLE 1&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;#define LPAREN() (&#xA;#define G(Q) 42&#xA;#define F(R, X, ...) __VA_OPT__(G R X) )&#xA;int x = F(LPAREN(), 0, &amp;lt;:-); // replaced by int x = 42;&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;The tokens for the identifiers &lt;code&gt;int&lt;/code&gt; and &lt;code&gt;x&lt;/code&gt; do not correspond to the names of&#xA;any macro. Hence, they are output as they are, without any change.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>CPP: Nested Replacement Ambiguity</title>
+      <link>https://asurati.github.io/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/</link>
+      <pubDate>Mon, 07 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/</guid>
+      <description>&lt;p&gt;The &lt;a href=&#34;https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf&#34;&gt;C2X&lt;/a&gt;&#xA;standard gives an example of a case where . . .&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;. . . it is not clear whether a replacement is nested or not.&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;p&gt;Below is the example, in some detail, to expose the ambiguity.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;61044-rescanning-and-further-replacement&#34;&gt;&lt;strong&gt;6.10.4.4 Rescanning and further replacement&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The example source code is:&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;    #define f(a) a*g&#xA;    #define g(a) f(a)&#xA;    f(2)(9)&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;The tokens subjected to macro replacement are those that constitute the&#xA;invocation line &lt;code&gt;f(2)(9)&lt;/code&gt;. The &lt;code&gt;active-macro-stack&lt;/code&gt; is initially empty.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

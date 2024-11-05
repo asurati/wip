@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QPU Demo: Triangle with NV Shader | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">QPU Demo: Triangle with NV Shader</span></h1>
+
+<h2 class="date">2021/10/02</h2>
+</div>
+
+<main>
+<p>This demo presents a method of programming the GPU to display a triangle, with
+the interpolation of the colours at the pixels covered by it. The graphics
+concepts used here borrow heavily from those of OpenGL.</p>
+<p>The GPU pipeline supports running in non-vertex-shading mode, or the NV mode.
+In this mode, pre-shaded vertices are presented to the pipeline. That is,
+the jobs of coordinate and vertex shader are done outside of the pipeline. In
+this demo, those jobs/calculations are done by hand, to produce the pre-shaded
+vertices in the format expected by the mode (see the section
+<em>Shaded Vertex Format in Memory</em> in the specification for the layout of the
+format).</p>
+<p>The calculations are presented as comments within the driver program
+<a href="https://github.com/asurati/x03/blob/main/demo/d50.c">here</a>.</p>
+<p>The Frame Buffer is setup to be of dimensions 640x480, with Colour/Pixel
+order BGRA8888, also known as 0xaarrggbb, or ARGB32.
+The <a href="https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface">Mailbox Property Interface</a> provides information on the steps needed to setup a
+frame buffer.</p>
+<p>The Tile-Binning Control List and the Tile-Rendering Control List must be
+prepared, the Binner must be run first and then the Renderer. The Binner is
+run by thread 0 and the Renderer is run by thread 1. The Renderer itself
+is multi-threaded when it runs the Fragment Shader - it provides support for two
+threads which are cooperatively scheduled.</p>
+<p>See <em>Table 38: Control Record IDs and Data Summary</em> in the spec for details.</p>
+<hr>
+<h3 id="tile-binning-control-list"><strong>Tile-Binning Control List:</strong></h3>
+<p>Raw bytes:</p>
+<pre><code>0x70,0x00,0x15,0x42,0x40,0x00,0x00,0x01,0x00,0x00,0x05,0x42,0x40,0x0a,0x08,0x04,
+0x06,0x07,0x66,0x00,0x00,0x00,0x00,0x80,0x02,0xe0,0x01,0x60,0x05,0x00,0x00,0x67,
+0x00,0x14,0x00,0x0f,0x69,0x00,0x00,0xa0,0x45,0x00,0x00,0x70,0x45,0x41,0x00,0x14,
+0x42,0x40,0x21,0x04,0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Byte(s)</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>0x70</code></td>
+          <td style="text-align: right"><code>0x70</code></td>
+          <td>A Tile Binning Mode Configuration Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x15,0x42,0x40</code></td>
+          <td style="text-align: right"><code>0x40421500</code></td>
+          <td>The bus address of the Tile Allocation Buffer. The Primitive Tile Binner (PTB) fills this buffer, for each tile, with the information about the primitives which impact the tile.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00,0x01,0x00</code></td>
+          <td style="text-align: right"><code>0x10000</code></td>
+          <td>The size of the Tile Allocation Buffer. It is kept large enough to avoid having to deal with the Binner Out of Memory interrupt for the modest binning job of this demo.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x05,0x42,0x40</code></td>
+          <td style="text-align: right"><code>0x40420500</code></td>
+          <td>The bus address of the Tile State Data Array - a buffer which needs 48 bytes per tile.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x0a</code></td>
+          <td style="text-align: right"><code>0xa</code></td>
+          <td>The width of the render, in units of tiles. The Frame Buffer width is 640pixels, and the width of a tile is 64 pixels, and <code>640/64 = 10 = 0xa</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x08</code></td>
+          <td style="text-align: right"><code>0x8</code></td>
+          <td>The height of the render, in units of tiles. The Frame Buffer height is 480pixels, and the height of a tile is 64 pixels, and <code>480/64 = 7.5</code>. Rounding up to the nearest integer gives <code>8</code>.<br/>It may seem as if the GPU may go beyond the Frame Buffer boundaries, but other factors such as the ClipWindow and the ViewPort settings help keep the GPU within the bounds and prevent any accesses to the memory area not belonging to the Frame Buffer.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x04</code></td>
+          <td style="text-align: right"><code>0x4</code></td>
+          <td>Flags.<br/>MultiSample Mode is <code>0</code> = <code>off</code> (A later demo enables MSAA 4x).<br/>Tile Buffer 64-bit Colour Depth is <code>0</code> = <code>off</code>.<br/>Auto-initialize Tile State Data Array is <code>1</code> = <code>on</code>.<br/>Tile Allocation Initial Block Size is <code>00</code> = <code>32</code>.<br/>Tile Allocation Block Size is <code>00</code> = <code>32</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x06</code></td>
+          <td style="text-align: right"><code>0x6</code></td>
+          <td>Start Tile Binning Control Record.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x07</code></td>
+          <td style="text-align: right"><code>0x7</code></td>
+          <td>Increment Semaphore Control Record.<br/> It requests the Binner to signal the semaphore, which is a resource shared by the Binner and the Renderer threads, after the Tile Lists have been flushed. This semaphore helps in synchronizing between the Binning and the Rendering passes/phases. The increment signals the Renderer thread (which <em>waits</em> on this semaphore) that the Tile Lists are all written down in the Tile Allocation Buffer, and that the Renderer thread can now fetch those lists and begin the render phase.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x66</code></td>
+          <td style="text-align: right"><code>0x66</code></td>
+          <td>Clip Window Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Clip Window Left Pixel Coordinate is <code>0</code>. Note that, for the GPU, the coordinate system has the origin at the bottom left, while the display circuitry assumes the top-left origin coordinate system. This inconsistency requires adjusting the Y-coordinate when performing the ViewPort Transform in order to flip the image along the X-axis.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00, 0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Clip Window Bottom Pixel Coordinate is <code>0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x80, 0x02</code></td>
+          <td style="text-align: right"><code>0x280</code></td>
+          <td>Clip Window Width in pixels is <code>640</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0xe0, 0x01</code></td>
+          <td style="text-align: right"><code>0x1e0</code></td>
+          <td>Clip Window Height in pixels is <code>480</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x60</code></td>
+          <td style="text-align: right"><code>0x60</code></td>
+          <td>Configuration Bits Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x05,0x00,0x00</code></td>
+          <td style="text-align: right"><code>0x5</code></td>
+          <td>Flags.<br/>Enable Forward Facing Primitive is <code>1</code> = <code>on</code><br/>Enable Reverse Facing Primitive is <code>0</code> = <code>off</code>.<br/>Clockwise Primitives is <code>1</code> = <code>on</code>.<br/> Because of the differences in the coordinate systems, as mentioned before, flipping the primitives across X-axis also changes their orientation. The input provides the primitives in counter-clockwise (CCW) order. Because of the flip, their order turns into clockwise (CW). The GPU defaults to CCW-is-Front policy. The flip requires it to adopt CW-is-Front policy. These flags enable it to do just that.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x67</code></td>
+          <td style="text-align: right"><code>0x67</code></td>
+          <td>ViewPort Offset Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x14</code></td>
+          <td style="text-align: right"><code>0x1400</code></td>
+          <td>ViewPort Centre X Coordinate.<br/> These X, and the Y below, coordinates are in signed 12.4 fixed point format. The <code>Xs</code> and <code>Ys</code> Screen Coordinates, which are calculated by the Coordinate and Vertex Shaders, or which are provided to the NV Mode, are relative to the ViewPort Centre.<br/>The float value is <code>320.0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x0f</code></td>
+          <td style="text-align: right"><code>0xf00</code></td>
+          <td>ViewPort Centre Y Coordinate.<br/>The float value is <code>240.0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x69</code></td>
+          <td style="text-align: right"><code>0x69</code></td>
+          <td>Clipper XY Scaling Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00,0xa0,0x45</code></td>
+          <td style="text-align: right"><code>5120.0</code></td>
+          <td>ViewPort Half-Width in 1/16th of pixel.<br/> The ViewPort size is the same as the Frame Buffer size. The Width of the Frame Buffer is 640 pixels. The Half-Width in 1/16th of pixel is <code>(640/2) * 16.0f = 5120.0f</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00,0x70,0x45</code></td>
+          <td style="text-align: right"><code>3840.0</code></td>
+          <td>ViewPort Half-Height in 1/16th of pixel.<br/> The ViewPort size is the same as the Frame Buffer size. The Height of the Frame Buffer is 480 pixels. The Half-Height in 1/16th of pixel is <code>(480/2) * 16.0f = 3840.0f</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x41</code></td>
+          <td style="text-align: right"><code>0x41</code></td>
+          <td>NV Shader State Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x14,0x42,0x40</code></td>
+          <td style="text-align: right"><code>0x40421400</code></td>
+          <td>The bus address of the NV Shader State Record.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x21</code></td>
+          <td style="text-align: right"><code>0x21</code></td>
+          <td>Vertex Array Primitives Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x04</code></td>
+          <td style="text-align: right"><code>0x4</code></td>
+          <td>Primitive Mode is <code>4</code> = <code>Triangles</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x03,0x00,0x00,0x00</code></td>
+          <td style="text-align: right"><code>0x3</code></td>
+          <td>The number of vertices is <code>3</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00,0x00,0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>The index of the first vertex is <code>0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x04</code></td>
+          <td style="text-align: right"><code>0x4</code></td>
+          <td>Flush Control Record.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h3 id="nv-shader-state-record"><strong>NV Shader State Record:</strong></h3>
+<p>Raw bytes:</p>
+<pre><code>0x01,0x18,0x00,0x03,0xf0,0x04,0x41,0x40,0x00,0x00,0x00,0x00,0x68,0x05,0x41,0x40
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Byte(s)</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>0x01</code></td>
+          <td style="text-align: right"><code>0x1</code></td>
+          <td>Flags.<br> Fragment Shader is Single Threaded is <code>1</code> = <code>on</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x18</code></td>
+          <td style="text-align: right"><code>0x18</code></td>
+          <td>Shaded Vertex Data Stride.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Number of Uniforms (not used currently).</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x03</code></td>
+          <td style="text-align: right"><code>0x3</code></td>
+          <td>Number of Varyings is <code>3</code>, since each vertex provides Red, Green and Blue colour components.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0xf0,0x04,0x41,0x40</code></td>
+          <td style="text-align: right"><code>0x404104f0</code></td>
+          <td>The bus address of the code for the Fragment Shader.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00,0x00,0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>The bus address of the Uniforms array. The Fragment Shader of this demo doesn&rsquo;t need to access Uniforms.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x68,0x05,0x41,0x40</code></td>
+          <td style="text-align: right"><code>0x40410568</code></td>
+          <td>The bus address of the Shaded Vertex Array.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h3 id="tile-rendering-control-list"><strong>Tile-Rendering Control List:</strong></h3>
+<p>Raw bytes:</p>
+<pre><code>0x72,0x00,0xff,0xff,0xff,0x00,0xff,0xff,0xff,0x00,0x00,0x00,0x00,0x00,0x71,0x00,
+0x00,0xac,0x5e,0x80,0x02,0xe0,0x01,0x04,0x00,0x73,0x00,0x00,0x1c,0x00,0x00,0x00,
+0x00,0x00,0x00,0x73,0x00,0x00,0x08,0x11,0x00,0x15,0x42,0x40,0x18,0x73,0x02,0x00,
+0x11,0x40,0x15,0x42,0x40,0x18,....,0x73,0x09,0x07,0x11,0xe0,0x1e,0x42,0x40,0x19
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Byte(s)</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>0x72</code></td>
+          <td style="text-align: right"><code>0x72</code></td>
+          <td>A Clear Colours Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0xff,0xff,0xff</code></td>
+          <td style="text-align: right"><code>0xffffff00</code></td>
+          <td>(Even Column?) Clear Colour value in ARGB32. <code>0xffffff00</code> is Yellow.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0xff,0xff,0xff</code></td>
+          <td style="text-align: right"><code>0xffffff00</code></td>
+          <td>(Odd Column?) Clear Colour value in ARGB32. <code>0xffffff00</code> is Yellow.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00,0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Clear Zs. The value the Depth Buffer is cleared to, initialized with. Irrelevant, as the Depth Buffer isn&rsquo;t employed in this demo.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Clear VG Mask. Irrelevant as this is NV Mode, and not VG mode.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Clear Stencil. Irrelevant as Stencil isn&rsquo;t employed in this demo.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x71</code></td>
+          <td style="text-align: right"><code>0x71</code></td>
+          <td>A Tile Rendering Mode Configuration Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00,0xac,0x5e</code></td>
+          <td style="text-align: right"><code>0x5eac0000</code></td>
+          <td>The bus address of the start of the Frame Buffer. The GPU considers the starting scanline of the Frame Buffer as the bottom-most scanline of the render.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x80,0x02</code></td>
+          <td style="text-align: right"><code>0x280</code></td>
+          <td>Width of the render in pixels is <code>640</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0xe0,0x01</code></td>
+          <td style="text-align: right"><code>0x1e0</code></td>
+          <td>Height of the render in pixels is <code>480</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x04,0x00</code></td>
+          <td style="text-align: right"><code>0x4</code></td>
+          <td>Flags:<br/>MultiSample Mode is <code>0</code> = <code>off</code>.<br/>Non-HDR Frame Buffer Colour Format is <code>01</code> = <code>RGBA8888</code>. Though the format being set here is RGBA8888, the Frame Buffer actually is configured with BGRA8888. Because both the formats are quite closely related, a slight adjustment to the Fragment Shader when writing the colour works.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x73</code></td>
+          <td style="text-align: right"><code>0x73</code></td>
+          <td>A Tile Coordinates Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Tile Column Number is <code>0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Tile Row Number is <code>0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x1c</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>A Store Tile Buffer General Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x00,0x00,</code><br/><code>0x00,0x00,0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Flags:<br/>Buffer To Store is <code>000</code> = <code>None</code>. A <code>None</code> write is required to Clear the Frame Buffer, Depth Buffer, and Stencil Buffer.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x73</code></td>
+          <td style="text-align: right"><code>0x73</code></td>
+          <td>A Tile Coordinates Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Tile Column Number is <code>0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00</code></td>
+          <td style="text-align: right"><code>0x0</code></td>
+          <td>Tile Row Number is <code>0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x08</code></td>
+          <td style="text-align: right"><code>0x8</code></td>
+          <td>A Wait On Semaphore Control Record.<br/> This control causes the Renderer thread to wait for the Binner thread to signal the flushing of the Tile Lists, before trying to process them. The wait is required only once per frame. Other Tile Control Records that follow this one doesn&rsquo;t need the wait.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x11</code></td>
+          <td style="text-align: right"><code>0x11</code></td>
+          <td>A Branch To Sub-List Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x00,0x15,0x42,0x40</code></td>
+          <td style="text-align: right"><code>0x40421500</code></td>
+          <td>The bus address of the Tile Control List prepared by the Binner.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x18</code></td>
+          <td style="text-align: right"><code>0x18</code></td>
+          <td>A Store Multisample Resolved Tile Colour Buffer Control Record.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>...</code></td>
+          <td style="text-align: right"><code>...</code></td>
+          <td>Many such Tile Coordinates + Branch To Sub-List + Store Multisample Resolved Tile Colour Buffer records follow, one for each tile.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x73</code></td>
+          <td style="text-align: right"><code>0x73</code></td>
+          <td>A Tile Coordinates Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x09</code></td>
+          <td style="text-align: right"><code>0x9</code></td>
+          <td>Tile Column Number is <code>9</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x07</code></td>
+          <td style="text-align: right"><code>0x7</code></td>
+          <td>Tile Row Number is <code>7</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x11</code></td>
+          <td style="text-align: right"><code>0x11</code></td>
+          <td>A Branch To Sub-List Control Record follows.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0xe0,0x1e,0x42,0x40</code></td>
+          <td style="text-align: right"><code>0x40421ee0</code></td>
+          <td>The bus address of the Tile Control List prepared by the Binner.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x19</code></td>
+          <td style="text-align: right"><code>0x19</code></td>
+          <td>A Store Multisample Resolved Tile Colour Buffer and Signal End of Frame Control Record.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h3 id="qpu-program"><strong>QPU Program:</strong></h3>
+<p>The Fragment Shader follows. It performs the final part of the Varyings
+Interpolation on the R, G, and B colour components, applies an opaque Alpha
+component, and stores the resultant colour while also signaling the GPU to
+unlock the Tile/Frame Buffer so that other QPUs, assigned to run the shader,
+can access it.</p>
+<pre><code>fmul	r0, vary_rd, a15;	# a15 has W.
+fadd	r0, r0, r5;
+
+fmul	r1, vary_rd, a15;
+fadd	r1, r1, r5;
+
+fmul	r2, vary_rd, a15;
+fadd	r2, r2, r5;
+
+li	r3, -, 0xff000000;	# alpha (= 8d)
+
+fmuli	r3, r0, 1f	pm8c;
+fmuli	r3, r1, 1f	pm8b;
+fmuli	r3, r2, 1f	pm8a;
+
+or	tlb_clr_all, r3, r3	usb;
+
+ori	host_int, 1, 1;
+pe;;;
+</code></pre>
+<p>The binary code:</p>
+<pre><code>0x203e303e, 0x100049e0, // fmul	r0, vary_rd, a15;
+0x019e7140, 0x10020827, // fadd	r0, r0, r5;
+
+0x203e303e, 0x100049e1, // fmul	r1, vary_rd, a15;
+0x019e7340, 0x10020867, // fadd	r1, r1, r5;
+
+0x203e303e, 0x100049e2, // fmul	r2, vary_rd, a15;
+0x019e7540, 0x100208a7, // fadd	r2, r2, r5;
+
+0xff000000, 0xe00208e7, // li	r3, -, 0xff000000;
+
+0x209e0007, 0xd16049e3, // fmuli	r3, r0, 1f	pm8c;
+0x209e000f, 0xd15049e3, // fmuli	r3, r1, 1f	pm8b;
+0x209e0017, 0xd14049e3, // fmuli	r3, r2, 1f	pm8a;
+
+0x159e76c0, 0x50020ba7, // or	tlb_clr_all, r3, r3	usb;
+
+0x159c1fc0, 0xd00209a7, // ori	host_int, 1, 1;
+0x009e7000, 0x300009e7, // pe;
+0x009e7000, 0x100009e7, // ;
+0x009e7000, 0x100009e7, // ;
+</code></pre>
+<hr>
+<h3 id="running-the-demo"><strong>Running the demo:</strong></h3>
+<p>The driver program can be found
+<a href="https://github.com/asurati/x03/blob/main/demo/d50.c">here</a>.</p>
+<p>There are three interrupts raised. The first is raised when the Tile-Binning is
+complete, with the Tile Lists flushed into the Tile Allocation Buffer.
+The second and third are raised because the Fragment Shader requested raising
+a host interrupt at the end of the program. The third is also raised because of
+another reason - when the Renderer has written out all the tiles into the
+Frame Buffer.</p>
+<p>The two interrupts - Binning Complete and Rendering Complete - have been
+enabled within the <code>V3D_INTENA</code> register.</p>
+<p>The <code>V3D_DBQITC</code> print shows the QPUs which were tasked with running the
+Fragment Shader.</p>
+<pre><code>v3dirqh: errstat 1000, intctl 6, dbqitc 0
+v3dirqh: errstat 1000, intctl 0, dbqitc ffe
+v3dirqh: errstat 1000, intctl 1, dbqitc 1
+d50: err 0
+</code></pre>
+<p>The Frame Buffer image is <a href="/wip/images/d50.png">here</a>. Notice the jagged
+appearance of the two sides of the triangle. A
+<a href="/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/">later demo</a> attempts to
+reduce these aliasing artifacts by enabling MSAA 4x.</p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

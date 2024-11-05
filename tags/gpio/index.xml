@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>GPIO on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/gpio/</link>
+    <description>Recent content in GPIO on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 08 Nov 2021 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/gpio/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>G73/NV4B demo: Fan Control</title>
+      <link>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</guid>
+      <description>&lt;p&gt;This is a demonstration of controlling the stock fan. The demo is based on the&#xA;DCB details pasted on the&#xA;&lt;a href=&#34;https://asurati.github.io/wip/wip/post/2021/10/02/qpu-demo-nv-shader&#34;&gt;GPU Passthrough, and EDID access&lt;/a&gt;&#xA;post.&lt;/p&gt;&#xA;&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may cause harm to the&#xA;devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;the-dcb-gpio-assignment-table&#34;&gt;&lt;strong&gt;The DCB: GPIO Assignment Table&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The offset to the GPIO Assignment table itself lies at offset &lt;code&gt;0xa&lt;/code&gt;&#xA;from the start of the DCB.&lt;/p&gt;&#xA;&lt;p&gt;The DCB starts at offset &lt;code&gt;0x8dd6&lt;/code&gt; within my BIOS ROM.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

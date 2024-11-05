@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QPU Demo: Interrupting the host | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">QPU Demo: Interrupting the host</span></h1>
+
+<h2 class="date">2021/09/28</h2>
+</div>
+
+<main>
+<p>This is the first in hopefully a few more articles demonstrating one of the
+ways in which the RPi&rsquo;s VideoCoreIV (vc4) GPU can be programmed.</p>
+<p>The 3D engine, V3D, is driven by the SIMD16 (physically SIMD4, but multiplexed
+over four consecutive clock cycles) processors known as QPUs, Quad Processing Units,
+or Quad Processors.</p>
+<p>In February 2014, Broadcom
+<a href="https://www.raspberrypi.org/blog/a-birthday-present-from-broadcom/">released</a>
+a <a href="https://docs.broadcom.com/doc/12358545">specification</a>
+detailing the vc4 V3D architecture. That document is the primary basis
+supporting the work demonstrated here.</p>
+<p>Note that vc4 is an older version; the most recent RPi, the RPi4
+and its variants, ships with VideoCoreVI (vc6) GPU. One of the differences
+between vc4 and vc6 is the inclusion of a MMU within the vc6 GPU.</p>
+<hr>
+<h3 id="hardware-setup"><strong>Hardware Setup:</strong></h3>
+<p>Raspberry Pi 1 Model B, <a href="https://www.raspberrypi.org/blog/model-b-now-ships-with-512mb-of-ram">512MB</a>.
+The particular <a href="https://www.raspberrypi.org/documentation/computers/raspberry-pi.html#:~:text=000f">model</a> I happen to have with me has the (old-style)
+revision code <code>000f</code>. There are other RPi generations/models also that ship
+with vc4.</p>
+<p>The RPi PL011 UART serves as the main input and output interface, with the
+HDMI output connected to a monitor.</p>
+<h3 id="software-setup"><strong>Software Setup:</strong></h3>
+<p>A bare-metal environment, with U-Boot. The ability of U-Boot, to load files
+over <code>TFTP</code>, is utilized.</p>
+<p>The QPU assembly is written, to be assembled using a custom, but incomplete,
+<a href="https://github.com/asurati/qas">assembler</a>.</p>
+<hr>
+<h3 id="demo-setup"><strong>Demo Setup:</strong></h3>
+<p>Before running a QPU program proper, the 3d engine must be powered up. Else,
+a read of its registers will likely return an error code, <code>0xdeadbeef</code>, and
+a write to them may be ignored.</p>
+<p>Request the firmware to power up the <a href="https://www.kernel.org/doc/Documentation/devicetree/bindings/soc/bcm/raspberrypi%2Cbcm2835-power.txt#:~:text=RPI_POWER_DOMAIN_V3D">V3D power domain</a>.</p>
+<p>Once it has power, read the engine&rsquo;s <code>V3D_IDENT0</code> register to verify
+that the read returns a valid value advertising the version of the hardware.</p>
+<p>The read returns <code>0x2443356</code> on RPi1B. In bytes, it is <code>0x56 0x33 0x44 0x02</code>
+(note that the 32-bit value is treated as little-endian),
+or, <code>V3D2</code>, after converting the printable ASCII codes to their respective
+characters. This version refers to the <code>v3d 2.x</code> hardware.</p>
+<hr>
+<h3 id="qpu-program"><strong>QPU Program:</strong></h3>
+<pre><code># Write a non-zero value into the HOST_INT register, to interrupt the host
+# CPU.
+ori	host_int, 1, 1;
+
+# NOPs, where the first one signals the end of the program, and the next two
+# are the instructions that can safely fill-in the two mandatory delay slots
+# following the instruction that signals the end of the program.
+pe;
+;
+;
+</code></pre>
+<p>The binary code that the assembler generates is given below. Each instruction
+is 64 bits, or two words, long. The first word is the LSW and the second word
+is the MSW of the corresponding instruction.</p>
+<pre><code class="language-text">0x159c1fc0, 0xd00209a7, // ori	host_int, 1, 1;
+0x009e7000, 0x300009e7, // pe;
+0x009e7000, 0x100009e7, // ;
+0x009e7000, 0x100009e7, // ;
+</code></pre>
+<hr>
+<p>The first instruction, <code>0xd00209a7159c1fc0</code>, is decoded as:</p>
+<pre><code class="language-text"> sig| unpack| pm| pack| cond_add| cond_mul| sf| ws| waddr_add| waddr_mul|
+1101|    000|  0| 0000|      001|      000|  0|  0|    100110|    100111|
+
+op_mul| op_add| raddr_a| small_immed| add_0| add_1| mul_0| mul_1|
+   000|  10101|  100111|      000001|   111|   111|   000|   000|
+</code></pre>
+<blockquote>
+<p>Note that the <code>[add|mul]_[a|b]</code> fields from the specification are
+replaced here by <code>[add|mul]_[0|1]</code> to avoid confusing the <code>a</code> and <code>b</code>
+suffixes with the register files A and B. Those suffixes here represent,
+respectively, the first and the second inputs to each unit.</p>
+<p>Contrast that usage of those suffixes with the usage in <code>raddr_[a|b]</code>
+fields, where they do indeed represent the register files A and B,
+respectively.</p>
+</blockquote>
+<p>Decoding in more details:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>sig</code></td>
+          <td style="text-align: right"><code>1101</code></td>
+          <td>This is an ALU instruction (as opposed to a load-immediate, or a branch, or a semaphore instruction). The value in the <code>raddr_b</code> field represents a small immediate value, instead of a register from the register file B.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>unpack</code></td>
+          <td style="text-align: right"><code>000</code></td>
+          <td>nop.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>pm</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Selects between register file A, or r4/MUL unit for pack/unpack operations. Irrelevant here, as both pack and unpack operations are set to nop.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>pack</code></td>
+          <td style="text-align: right"><code>0000</code></td>
+          <td>nop.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>cond_add</code></td>
+          <td style="text-align: right"><code>001</code></td>
+          <td>Conditional execution switch for the ADD unit. The value <code>1</code> says <code>execute always</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>cond_mul</code></td>
+          <td style="text-align: right"><code>000</code></td>
+          <td>Conditional execution switch for the MUL unit. The value <code>0</code> says <code>execute never</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>sf</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The instruction should not set any condition flags.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>ws</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The ADD and the MUL units write to their default destination register files, A and B, respectively.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>waddr_a</code></td>
+          <td style="text-align: right"><code>100110</code></td>
+          <td>Address of the register the ADD unit writes its output to (assuming that the conditional execution flags allow the execution). The address is <code>0x26(=38)</code>. Since <code>ws == 0</code>, the register belongs to the register file A. Thus, the register the ADD unit writes to is <code>a38</code>, or the <code>HOST_INT</code> IO register.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>waddr_b</code></td>
+          <td style="text-align: right"><code>100111</code></td>
+          <td>Address of the register the MUL unit writes to. The address is <code>0x27=39</code>. Since <code>ws == 0</code>, the register belongs to the register file B. Thus, the register the MUL unit writes to is <code>b39</code>, a NOP register which likely results in the output being discarded. Note that the <code>cond_mul</code> prevents the execution of the MUL unit altogether.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>op_mul</code></td>
+          <td style="text-align: right"><code>000</code></td>
+          <td>The operation that the MUL unit should perform. The value <code>0</code> represents a nop.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>op_add</code></td>
+          <td style="text-align: right"><code>10101</code></td>
+          <td>The operation that the ADD unit should perform. The value <code>0x15(=21)</code> is the binary <code>or</code> operation.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>raddr_a</code></td>
+          <td style="text-align: right"><code>100111</code></td>
+          <td>In case any of the ALU or the MUL units reads from the register file A for their sources/inputs, this field gives the address of the particular register being read. As can be seen later, no unit reads from the register file A, so this address is irrelevant here. The NOP register <code>a39</code> is used as a placeholder for no read.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>small_immed</code></td>
+          <td style="text-align: right"><code>000001</code></td>
+          <td>The embedded immediate <code>1</code> represents the integer <code>1</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>add_0</code></td>
+          <td style="text-align: right"><code>111</code></td>
+          <td>The first source/input to the ADD unit. The value <code>7</code> asks the unit to read from the register file B field, <code>raddr_b</code>. Since the field contains an integer <code>1</code>, that integer becomes the first source/input to the ADD unit.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>add_1</code></td>
+          <td style="text-align: right"><code>111</code></td>
+          <td>The second source/input to the ADD unit. Same value as <code>add_0</code>. Reads the embedded integer, <code>1</code>. As <code>op_add = or</code>, the ADD unit thus calculates <code>(1 | 1) = 1</code> and writes the result into the <code>HOST_INT</code> register.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>mul_0</code></td>
+          <td style="text-align: right"><code>000</code></td>
+          <td>The first source/input to the MUL unit. Reads the accumulator register <code>r0</code>. But, as <code>cond_mul</code> is set to <code>execute never</code>, no read takes place.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>mul_1</code></td>
+          <td style="text-align: right"><code>000</code></td>
+          <td>The second source/input to the MUL unit. Similar to <code>mul_0</code>.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<p>The second instruction, <code>0x300009e7009e7000</code>, is decoded as:</p>
+<pre><code class="language-text"> sig| unpack| pm| pack| cond_add| cond_mul| sf| ws| waddr_add| waddr_mul|
+0011|    000|  0| 0000|      000|      000|  0|  0|    100111|    100111|
+
+op_mul| op_add| raddr_a| raddr_b| add_0| add_1| mul_0| mul_1|
+   000|  10101|  100111|  100111|   000|   000|   000|   000|
+</code></pre>
+<p>Since the <code>cond_add</code> and <code>cond_mul</code> fields are both set to <code>execute never</code>, the
+instruction is a nop - both units do not execute. The only useful piece of
+information is the signal.</p>
+<p><code>sig:0011</code>	The value <code>3</code> represents the end-of-the-program signal, which
+is required to be present at the end of every QPU program.</p>
+<hr>
+<p>The third and the fourth instructions are <code>0x100009e7009e7000</code>. They are again
+nops, with the no-signal signal bits. These nops are instructions that can
+safely fill the two delay slots that must follow the instruction that signals
+the end of the program.</p>
+<hr>
+<h3 id="running-the-demo"><strong>Running the demo:</strong></h3>
+<p>The driver program can be found <a href="https://github.com/asurati/x03/blob/main/demo/d1.c">here</a>.</p>
+<p>The V3D interrupt handler does receive the interrupt raised by the QPU. The
+handler is made to print the contents of two registers, <code>V3D_INTCTL</code> and
+<code>V3D_DBQITC</code>. It prints</p>
+<pre><code>v3dirqh: intctl 4, dbqitc 800
+</code></pre>
+<p>The <code>V3D_DBQITC</code> register has a single bit set, bit#11. It corresponds to an
+interrupt latched from QPU with ID 11. So, <em>that</em> QPU, out of all the available
+ones, was scheduled to run the program. The program can also read the <code>b38</code>
+register, named <code>QPU_NUMBER</code>, if it wants to know the ID of the QPU it is
+running on.</p>
+<p>The <code>V3D_INTCTL</code> register has Binner-Out-of-Memory set. Not of any
+relevance here, it was raised likely because the Binner has not been
+provided with sufficient memory (although no Binning/Rendering work has been
+scheduled).</p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>AoC on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/aoc/</link>
+    <description>Recent content in AoC on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 25 Oct 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/aoc/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code solutions in Perl</title>
+      <link>https://asurati.github.io/wip/post/2024/10/25/advent-of-code-solutions-in-perl/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2024/10/25/advent-of-code-solutions-in-perl/</guid>
+      <description>&lt;p&gt;&lt;a href=&#34;https://gitlab.com/asurati/aoc&#34;&gt;Solutions&lt;/a&gt; for these years posted so far:&lt;/p&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://adventofcode.com/2015&#34;&gt;2015&lt;/a&gt;&lt;/p&gt;&#xA;&lt;hr&gt;</description>
+    </item>
+  </channel>
+</rss>

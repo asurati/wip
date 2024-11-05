@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QPU Demo: Export HVS output to the system RAM | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">QPU Demo: Export HVS output to the system RAM</span></h1>
+
+<h2 class="date">2021/10/08</h2>
+</div>
+
+<main>
+<p>This demo presents a way to configure HVS FIFO2/Channel2 and the Transposer
+(TXP) block to gather the scaled/converted/transformed scan-lines into a buffer
+inside the system RAM.</p>
+<p>The HVS FIFO2 has a choice in how its output is consumed - it can be consumed
+either by PV1, or by the TXP block. The RPi firmware, by default, seems to
+disable the FIFO2 output (<code>DSP3_MUX</code>), so that it is not connected to PV1. This is
+very fortunate, as the firmware has already done a part of the necessary setup.</p>
+<p>The demo is based on
+<a href="/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/">QPU Demo: Triangle with MSAA 4x</a>. That demo presents a rendering of a triangle stored inside a 640x480 frame
+buffer. The default RPi setup (RPi firmware + U-Boot) has the HDMI pipeline
+running at 1920x1080 resolution. When the triangle is displayed on the screen,
+the image is scaled-up by the HVS to 1440x1080, maintaining the aspect ratio.</p>
+<p>This demo here attempts to have the display pipeline write out that scaled
+image into a separate, appropriately sized frame buffer in the system RAM.
+Although the HDMI pipeline (consisting of HVS FIFO1/Channel1, PV2, and the HDMI
+encoder), may not allow poking into their internal video FIFO buffers,
+the HVS FIFO2/Channel2 and the TXP block can be configured to gather the
+output from the HVS into the system RAM, creating an identical copy of the image
+scaled and displayed on the screen.</p>
+<p>The format of the HVS registers are shown in
+<a href="/wip/post/2021/10/07/hvs-and-pv-settings/">HVS and PV Settings</a>. The
+particular values set can be found in the driver program,
+<a href="https://github.com/asurati/x03/blob/main/demo/d55.c">here</a>.</p>
+<hr>
+<h3 id="transposer-registers"><strong>Transposer Registers:</strong></h3>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">TXP Register</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left"><code>TXP_DST_POINTER</code></td>
+          <td style="text-align: right"><code>0x404c7ea4</code></td>
+          <td>The bus address of the output frame buffer, into which the TXP will write the scaled pixels.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>TXP_DST_PITCH</code></td>
+          <td style="text-align: right"><code>0x1680</code></td>
+          <td>The pitch of the output frame buffer. <code>1440 * 4 = 5760</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>TXP_DIM</code></td>
+          <td style="text-align: right"><code>0x43805a0</code></td>
+          <td><code>[15:0]=1440</code>. The Width of the output frame buffer.<br/><code>[31:16]=1080</code>. The Height of the output frame buffer.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>TXP_DST_CTRL</code></td>
+          <td style="text-align: right"><code>0x545f0d01</code></td>
+          <td>The TXP control register.<br/><code>[0]=1</code>. Go.<br/><code>[11:8]=13</code>. Output in ARGB32 Format.<br/><code>[19:16]=0xf</code>. Byte Enable; <code>0xf</code> recommended.<br/><code>[20]=1</code>. Enable writing the Alpha component.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h3 id="running-the-demo"><strong>Running the demo:</strong></h3>
+<p>The driver program can be found
+<a href="https://github.com/asurati/x03/blob/main/demo/d55.c">here</a>.</p>
+<p>The scaled-up image is found <a href="/wip/images/d55.png">here</a>. For comparison, the
+source image, which is 640x480 in size, and which is rendered by the 3D
+pipeline, is found <a href="/wip/images/d53.png">here</a>.</p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

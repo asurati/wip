@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Home on w-i-p</title>
+    <link>https://asurati.github.io/wip/</link>
+    <description>Recent content in Home on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 25 Oct 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Advent Of Code solutions in Perl</title>
+      <link>https://asurati.github.io/wip/post/2024/10/25/advent-of-code-solutions-in-perl/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2024/10/25/advent-of-code-solutions-in-perl/</guid>
+      <description>&lt;p&gt;&lt;a href=&#34;https://gitlab.com/asurati/aoc&#34;&gt;Solutions&lt;/a&gt; for these years posted so far:&lt;/p&gt;&#xA;&lt;p&gt;&lt;a href=&#34;https://adventofcode.com/2015&#34;&gt;2015&lt;/a&gt;&lt;/p&gt;&#xA;&lt;hr&gt;</description>
+    </item>
+    <item>
+      <title>Flare-On 11</title>
+      <link>https://asurati.github.io/wip/post/2024/10/25/flare-on-11/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2024/10/25/flare-on-11/</guid>
+      <description>&lt;p&gt;&lt;img src=&#34;https://asurati.github.io/wip/wip/data/FlareOn11.png&#34; alt=&#34;&#34;&gt;&lt;/p&gt;&#xA;&lt;hr&gt;</description>
+    </item>
+    <item>
+      <title>vulkan: Dissecting vkcube: Build</title>
+      <link>https://asurati.github.io/wip/post/2024/03/24/vulkan-dissecting-vkcube-build/</link>
+      <pubDate>Sun, 24 Mar 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2024/03/24/vulkan-dissecting-vkcube-build/</guid>
+      <description>&lt;p&gt;This post lists the steps to build debug versions of mesa, libdrm and&#xA;vkcube.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-sh&#34;&gt;    # Build debug versions of mesa, libdrm, and vulkan-tools&#xA;    # build-mesa-vt-dbg.sh&#xA;    # Run as: sh build-mesa-vt-dbg.sh&#xA;    &#xA;    set -e&#xA;    set -u&#xA;    &#xA;    DOWNLOAD=false&#xA;    SRC=/tmp/src&#xA;    BLD=/tmp/bld&#xA;    INSTALL=$HOME/tools/vt-dbg&#xA;    &#xA;    mkdir -p $SRC&#xA;    if [ &amp;quot;$DOWNLOAD&amp;quot; == &amp;quot;true&amp;quot; ]; then&#xA;        cd $SRC&#xA;        git clone --depth 1 https://github.com/KhronosGroup/Vulkan-Headers.git vh&#xA;        git clone --depth 1 https://github.com/KhronosGroup/Vulkan-Tools.git vt&#xA;        git clone --depth 1 https://github.com/zeux/volk.git volk&#xA;        git clone --depth 1 https://github.com/CLRX/CLRX-mirror.git clrx&#xA;        git clone --depth 1 https://gitlab.freedesktop.org/wayland/wayland-protocols.git wp&#xA;        git clone --depth 1 https://gitlab.freedesktop.org/mesa/drm.git drm&#xA;        git clone --depth 1 https://gitlab.freedesktop.org/mesa/mesa.git mesa&#xA;    fi&#xA;    &#xA;    # Some other dependencies assumed to be already installed:&#xA;    # wayland-scanner, wayland-client, meson, cmake, pkgconf, python-mako,&#xA;    # llvm, llvm-libs&#xA;    &#xA;    mkdir -p $BLD/vh&#xA;    mkdir -p $BLD/vt&#xA;    mkdir -p $BLD/wp&#xA;    mkdir -p $BLD/clrx&#xA;    mkdir -p $BLD/volk&#xA;    mkdir -p $BLD/drm&#xA;    mkdir -p $BLD/mesa&#xA;    &#xA;    # clrx disassembler seems to be required only for older AMD GPUs,&#xA;    # GFX6-GFX7 generation. Disabled for now.&#xA;    # cd $BLD/clrx&#xA;    # cmake -DCMAKE_INSTALL_PREFIX=$INSTALL/clrx -DCMAKE_BUILD_TYPE=Release $SRC/clrx&#xA;    # make install -j4&#xA;    &#xA;    # Vulkan-Headers&#xA;    cd $BLD/vh&#xA;    cmake -DCMAKE_INSTALL_PREFIX=$INSTALL/vh $SRC/vh&#xA;    make install -j4&#xA;    &#xA;    # volk&#xA;    cd $BLD/volk&#xA;    cmake -DCMAKE_INSTALL_PREFIX=$INSTALL/volk -DVOLK_HEADERS_ONLY=ON \&#xA;    -DVOLK_INSTALL=ON -DVULKAN_HEADERS_INSTALL_DIR=$INSTALL/vh $SRC/volk&#xA;    make install -j4&#xA;    &#xA;    # wayland-protocols&#xA;    cd $SRC/wp&#xA;    meson setup --reconfigure $BLD/wp -Dprefix=$INSTALL/wp -Dtests=false&#xA;    ninja -C $BLD/wp install -j4&#xA;    &#xA;    # Vulkan-Tools (only cube on wayland)&#xA;    cd $BLD/vt&#xA;    PKG_CONFIG_PATH=$INSTALL/wp/share/pkgconfig \&#xA;    cmake -DCMAKE_INSTALL_PREFIX=$INSTALL/vt \&#xA;    -DCMAKE_PREFIX_PATH=$INSTALL/volk -DBUILD_ICD=OFF -DBUILD_CUBE=ON \&#xA;    -DBUILD_VULKANINFO=OFF -DVULKAN_HEADERS_INSTALL_DIR=$INSTALL/vh \&#xA;    -DBUILD_WSI_XCB_SUPPORT=OFF -DBUILD_WSI_XLIB_SUPPORT=OFF \&#xA;    -DBUILD_WSI_WAYLAND_SUPPORT=ON -DCUBE_WSI_SELECTION=WAYLAND \&#xA;    -DCMAKE_BUILD_TYPE=Debug $SRC/vt&#xA;    make install -j4&#xA;    &#xA;    # libdrm (only vulkan for AMD)&#xA;    cd $SRC/drm&#xA;    meson setup --reconfigure $BLD/drm -Dprefix=$INSTALL/drm -Dbuildtype=debug \&#xA;    -Dradeon=disabled -Dintel=disabled -Damdgpu=enabled -Dnouveau=disabled \&#xA;    -Dvmwgfx=disabled -Dfreedreno=disabled -Dvc4=disabled -Detnaviv=disabled \&#xA;    -Dcairo-tests=disabled -Dtests=false -Dman-pages=disabled -Dvalgrind=disabled&#xA;    ninja -C $BLD/drm install -j4&#xA;    &#xA;    # mesa (only vulkan for AMD + LLVM)&#xA;    cd $SRC/mesa&#xA;    PKG_CONFIG_PATH=$INSTALL/wp/share/pkgconfig \&#xA;    meson setup --reconfigure $BLD/mesa -Dprefix=$INSTALL/mesa \&#xA;    -Dbuildtype=debug -Dgallium-drivers= -Dvulkan-drivers=amd -Degl=disabled \&#xA;    -Dplatforms=wayland -Dtools= -Dllvm=enabled -Dvideo-codecs=&#xA;    ninja -C $BLD/mesa install -j4&#xA;    &#xA;    # rm -rf /tmp/src&#xA;    # rm -rf /tmp/bld&#xA;    &#xA;    # To run vkcube, with various debug-logs enabled.&#xA;    &#xA;    # INSTALL=$HOME/tools/vt-dbg;\&#xA;    # PATH=$PATH:$INSTALL/clrx/bin \&#xA;    # LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INSTALL/clrx/lib64 \&#xA;    # LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INSTALL/drm/lib \&#xA;    # LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$INSTALL/mesa/lib \&#xA;    # RADEON_ICD_FILENAME=radeon.icd.x86_64.json \&#xA;    # VK_ICD_FILENAMES=$INSTALL/mesa/share/vulkan/icd.d/$RADEON_ICD_FILE_NAME \&#xA;    # MESA_SHADER_CACHE_DISABLE=true \&#xA;    # NIR_DEBUG=print,print_vs,print_fs,print_cs,print_internal,print_pass_flags \&#xA;    # RADV_DEBUG=epilogs,img,info,llvm,metashaders,nomemorycache,preoptir,prologs,\&#xA;    # shaders,shaderstats,spirv,startup \&#xA;    # $INSTALL/vt/bin/vkcube-wayland --c 1 &amp;amp;&amp;gt; /tmp/out.txt&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;hr&gt;</description>
+    </item>
+    <item>
+      <title>cc: Postfix Conditional Expressions</title>
+      <link>https://asurati.github.io/wip/post/2023/12/19/cc-postfix-conditional-expressions/</link>
+      <pubDate>Tue, 19 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/12/19/cc-postfix-conditional-expressions/</guid>
+      <description>&lt;p&gt;This post demonstrates the outline of a method to convert a conditional&#xA;expression (possibly containing other such expressions within itself) into a&#xA;postfix expression. It may be possible to optimize the method further.&lt;/p&gt;&#xA;&lt;p&gt;The conversion helps with evaluating the &lt;code&gt;constant-expression&lt;/code&gt; of the &lt;code&gt;#if&lt;/code&gt;&#xA;directive.&lt;/p&gt;&#xA;&lt;p&gt;An expression such as &lt;code&gt;a ? b : c&lt;/code&gt; is thought to be ending with a delimiter&#xA;&lt;code&gt;¿&lt;/code&gt; (the upside-down question mark), so that, in its postfix representation,&#xA;the delimiter serves as the end-marker for the corresponding conditional&#xA;expression.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>ada: Building ada-mode for Emacs</title>
+      <link>https://asurati.github.io/wip/post/2023/12/05/ada-building-ada-mode-for-emacs/</link>
+      <pubDate>Tue, 05 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/12/05/ada-building-ada-mode-for-emacs/</guid>
+      <description>&lt;p&gt;This post lists steps that build&#xA;&lt;a href=&#34;https://elpa.gnu.org/packages/ada-mode.html&#34;&gt;&lt;code&gt;ada-mode&lt;/code&gt;&lt;/a&gt; for Emacs. The build&#xA;depends on the GNAT FSF compiler being available on the build system. On&#xA;Arch Linux, the compiler is available as the&#xA;&lt;a href=&#34;https://wiki.archlinux.org/title/Ada&#34;&gt;&lt;code&gt;gcc-ada&lt;/code&gt;&lt;/a&gt; package.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-bash&#34;&gt;    # build-ada-mode.sh&#xA;    # Run as: sh build-ada-mode.sh&#xA;&#xA;    set -e&#xA;    set -u&#xA;&#xA;    DOWNLOAD=true&#xA;    SRC=/tmp/src&#xA;    TOOLS=$HOME/tools/ada&#xA;    LR1_SRC=ada_annex_p_lr1_parse_table.txt-8.1.0&#xA;    LR1_TAB=ada_annex_p_lr1_re2c_parse_table.txt&#xA;    LR1_URL=https://download.savannah.nongnu.org/releases/ada-mode/$LR1_SRC&#xA;    SAVE=$PATH&#xA;&#xA;    mkdir -p $SRC&#xA;    if [ &amp;quot;$DOWNLOAD&amp;quot; == &amp;quot;true&amp;quot; ]; then&#xA;        cd $SRC&#xA;        git clone --depth 1 https://github.com/AdaCore/gprbuild.git&#xA;        git clone --depth 1 https://github.com/AdaCore/xmlada.git&#xA;        git clone --depth 1 https://github.com/AdaCore/gprconfig_kb.git&#xA;        git clone --depth 1 https://github.com/AdaCore/gnatcoll-core.git&#xA;        git clone --depth 1 --single-branch --branch externals/wisi \&#xA;            https://git.savannah.gnu.org/git/emacs/elpa.git wisi&#xA;        git clone --depth 1 --single-branch --branch externals/ada-mode \&#xA;            https://git.savannah.gnu.org/git/emacs/elpa.git ada-mode&#xA;        git clone --depth 1 --single-branch --branch externals/gpr-mode \&#xA;            https://git.savannah.gnu.org/git/emacs/elpa.git gpr-mode&#xA;        sed -i &#39;/wisitoken-bnf-generate/d&#39; $SRC/ada-mode/build.sh&#xA;        wget --show-progress -O $LR1_TAB $LR1_URL&#xA;    fi&#xA;&#xA;    # Bootstrap GPRbuild&#xA;    cd $SRC/gprbuild&#xA;    ./bootstrap.sh --with-xmlada=../xmlada --with-kb=../gprconfig_kb \&#xA;    --prefix=$TOOLS/bgprb&#xA;    export PATH=$SAVE:$TOOLS/bgprb/bin&#xA;&#xA;    # XML/Ada&#xA;    cd $SRC/xmlada&#xA;    ./configure --prefix=$TOOLS/xmlada --enable-shared&#xA;    make&#xA;    make install&#xA;    export GPR_PROJECT_PATH=$TOOLS/xmlada/share/gpr&#xA;&#xA;    # GPRbuild&#xA;    cd $SRC/gprbuild&#xA;    make prefix=$TOOLS/gprb setup&#xA;    make LIBRARY_TYPE=relocatable all&#xA;    make libgpr.build&#xA;    make install&#xA;    make libgpr.install&#xA;    export PATH=$SAVE:$TOOLS/gprb/bin&#xA;    export GPR_PROJECT_PATH=$GPR_PROJECT_PATH:$TOOLS/gprb/share/gpr&#xA;&#xA;    # GNATcoll-Core&#xA;    cd $SRC/gnatcoll-core&#xA;    make prefix=$TOOLS/gc setup&#xA;    make&#xA;    make install&#xA;    export GPR_PROJECT_PATH=$GPR_PROJECT_PATH:$TOOLS/gc/share/gpr&#xA;&#xA;    # ada-mode&#xA;    cd $SRC/ada-mode&#xA;    export WISI_DIR=../wisi&#xA;    ./build.sh&#xA;    ./install.sh $TOOLS/am&#xA;&#xA;    # lr1 table&#xA;    mv $SRC/$LR1_TAB $TOOLS/am/bin/&#xA;&#xA;    # gpr-mode&#xA;    cd $SRC/gpr-mode&#xA;    ./build.sh&#xA;    ./install.sh $TOOLS/gm&#xA;&#xA;    # Run &#39;strip -s&#39; on gprbuild, ada-mode and gpr-mode binaries.&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;emacs-configuration&#34;&gt;Emacs configuration:&lt;/h3&gt;&#xA;&lt;p&gt;Modify the Emacs init file, to append &lt;code&gt;exec-path&lt;/code&gt; with the paths to the&#xA;&lt;code&gt;ada-mode&lt;/code&gt; and &lt;code&gt;gpr-mode&lt;/code&gt; binaries.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>cc: Decoding Types</title>
+      <link>https://asurati.github.io/wip/post/2023/09/17/cc-decoding-types/</link>
+      <pubDate>Sun, 17 Sep 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/09/17/cc-decoding-types/</guid>
+      <description>&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update1&#34;&gt;Update #1&lt;/a&gt; on: 23rd September, 2023.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;This post demonstrates a method to decode the &lt;code&gt;Declaration&lt;/code&gt;s and&#xA;&lt;code&gt;TypeName&lt;/code&gt;s found in the C language, into a list of types, or a &lt;code&gt;type-list&lt;/code&gt;.&#xA;The method is similar to that&#xA;used in converting expressions in infix notation into a corresponding&#xA;&lt;a href=&#34;https://en.wikipedia.org/wiki/Reverse_Polish_notation&#34;&gt;postfix&lt;/a&gt; notation.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;rules-of-precedencea-nameprecedence_rulesa&#34;&gt;Rules of Precedence:&lt;a name=&#34;precedence_rules&#34;&gt;&lt;/a&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The precedence of &lt;code&gt;*&lt;/code&gt; is lower than that of &lt;code&gt;[]&lt;/code&gt; or &lt;code&gt;()&lt;/code&gt;. The latter two have&#xA;the same precedence, but only &lt;code&gt;[]&lt;/code&gt; can occur more than once at the same level&#xA;without an intervening pair of parentheses, and they are scanned in a&#xA;left-to-right manner (i.e. &lt;code&gt;[]&lt;/code&gt; is left-associative in relation to itself).&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>cc: Context-Sensitive Parsing of alignas</title>
+      <link>https://asurati.github.io/wip/post/2023/09/14/cc-context-sensitive-parsing-of-alignas/</link>
+      <pubDate>Thu, 14 Sep 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/09/14/cc-context-sensitive-parsing-of-alignas/</guid>
+      <description>&lt;p&gt;This post demonstrates the ambiguity that arises when parsing the C23&#xA;&lt;code&gt;AlignmentSpecifier&lt;/code&gt; &lt;a href=&#34;https://en.cppreference.com/w/c/language/_Alignas&#34;&gt;&lt;code&gt;alignas&lt;/code&gt;&lt;/a&gt;,&#xA;and the context-sensitive nature of the parsing required to correctly&#xA;parse the specifier.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;the-ambiguity&#34;&gt;The ambiguity:&lt;/h3&gt;&#xA;&lt;p&gt;The specifier is represented by the non-terminal &lt;code&gt;AlignmentSpecifier&lt;/code&gt;&#xA;in the C2x &lt;a href=&#34;https://github.com/asurati/x24/blob/main/grammar.txt&#34;&gt;grammar&lt;/a&gt;:&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code&gt;    AlignmentSpecifier: alignas ( TypeName )&#xA;    AlignmentSpecifier: alignas ( ConstantExpression )&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;The ambiguity arises from the fact that both &lt;code&gt;TypeName&lt;/code&gt; and&#xA;&lt;code&gt;ConstantExpression&lt;/code&gt; can derive an &lt;code&gt;Identifier&lt;/code&gt;.&lt;/p&gt;&#xA;&lt;p&gt;For e.g., in the declaration&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>cc: Generalized LR Parsing</title>
+      <link>https://asurati.github.io/wip/post/2023/08/26/cc-generalized-lr-parsing/</link>
+      <pubDate>Sat, 26 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/26/cc-generalized-lr-parsing/</guid>
+      <description>&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update1&#34;&gt;Update #1&lt;/a&gt; on: 28th August, 2023.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update2&#34;&gt;Update #2&lt;/a&gt; on: 13th September, 2023.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;This post demonstrates the &lt;a href=&#34;https://en.wikipedia.org/wiki/GLR_parser&#34;&gt;GLR&lt;/a&gt;&#xA;parsing of a tiny C program, with the reader assuming the role of an&#xA;&lt;a href=&#34;https://en.wikipedia.org/wiki/Canonical_LR_parser&#34;&gt;LR(1)&lt;/a&gt;&#xA;automaton/finite-state-machine.&lt;/p&gt;&#xA;&lt;p&gt;The grammar constructs utilized here are adopted from the informal grammar&#xA;description in the C2x standard, augmented with a production&lt;/p&gt;&#xA;&lt;p&gt;&lt;code&gt;TranslationObject -&amp;gt; TranslationUnit&lt;/code&gt;,&lt;/p&gt;&#xA;&lt;p&gt;where &lt;code&gt;TranslationObject&lt;/code&gt; is a&#xA;non-terminal that does not occur on the RHS of any production.&lt;/p&gt;&#xA;&lt;p&gt;The look-aheads (&lt;code&gt;las&lt;/code&gt;) of an item are either not shown, or shown only&#xA;in brevity, as most items contain several tens of look-aheads.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>CPP: Macro Replacement: Page 182, EXAMPLE 3</title>
+      <link>https://asurati.github.io/wip/post/2023/08/09/cpp-macro-replacement-page-182-example-3/</link>
+      <pubDate>Wed, 09 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/09/cpp-macro-replacement-page-182-example-3/</guid>
+      <description>&lt;p&gt;This post explains the EXAMPLE 3 given on Page# 182&#xA;(page# that would be found printed on the page of a paper-copy, not the one&#xA;displayed on a pdf reader application) of the working draft,&#xA;dated April 1, 2023, of the&#xA;&lt;a href=&#34;https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf&#34;&gt;C2X&lt;/a&gt;&#xA;standard.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;#define x 3&#xA;#define f(a) f(x * (a))&#xA;#undef x&#xA;#define x 2&#xA;#define g f&#xA;#define z z[0]&#xA;#define h g(\~{ }&#xA;#define m(a) a(w)&#xA;#define w 0,1&#xA;#define t(a) a&#xA;#define p() int&#xA;#define q(x) x&#xA;#define r(x,y) x ## y&#xA;#define str(x) # x&#xA;f(y+1) + f(f(z)) % t(t(g)(0) + t)(1);&#xA;g(x+(3,4)-w) | h 5) &amp;amp; m&#xA;(f)^m(m);&#xA;p() i[q()] = { q(1), r(2,3), r(4,), r(,5), r(,) };&#xA;char c[2][6] = { str(hello), str() };&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;insexpansion-of-fy1ins&#34;&gt;&lt;ins&gt;Expansion of &lt;code&gt;f(y+1)&lt;/code&gt;&lt;/ins&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The CPP pushes on the currently empty &lt;code&gt;active-macro-stack-#0&lt;/code&gt; an entry&#xA;corresponding to the invocation &lt;code&gt;f(y+1)&lt;/code&gt;:&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>CPP: Macro Replacement: Page 179, EXAMPLE 1</title>
+      <link>https://asurati.github.io/wip/post/2023/08/08/cpp-macro-replacement-page-179-example-1/</link>
+      <pubDate>Tue, 08 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/08/cpp-macro-replacement-page-179-example-1/</guid>
+      <description>&lt;p&gt;This post explains the EXAMPLE 1 given on Page# 179&#xA;(page# that would be found printed on the page of a paper-copy, not the one&#xA;displayed on a pdf reader application) of the working draft,&#xA;dated April 1, 2023, of the&#xA;&lt;a href=&#34;https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf&#34;&gt;C2X&lt;/a&gt;&#xA;standard.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;page-179-example-1&#34;&gt;&lt;strong&gt;Page 179, EXAMPLE 1&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;#define LPAREN() (&#xA;#define G(Q) 42&#xA;#define F(R, X, ...) __VA_OPT__(G R X) )&#xA;int x = F(LPAREN(), 0, &amp;lt;:-); // replaced by int x = 42;&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;The tokens for the identifiers &lt;code&gt;int&lt;/code&gt; and &lt;code&gt;x&lt;/code&gt; do not correspond to the names of&#xA;any macro. Hence, they are output as they are, without any change.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>CPP: Nested Replacement Ambiguity</title>
+      <link>https://asurati.github.io/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/</link>
+      <pubDate>Mon, 07 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/08/07/cpp-nested-replacement-ambiguity/</guid>
+      <description>&lt;p&gt;The &lt;a href=&#34;https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3096.pdf&#34;&gt;C2X&lt;/a&gt;&#xA;standard gives an example of a case where . . .&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;. . . it is not clear whether a replacement is nested or not.&lt;/p&gt;&#xA;&lt;/blockquote&gt;&#xA;&lt;p&gt;Below is the example, in some detail, to expose the ambiguity.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;61044-rescanning-and-further-replacement&#34;&gt;&lt;strong&gt;6.10.4.4 Rescanning and further replacement&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The example source code is:&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code class=&#34;language-c&#34;&gt;    #define f(a) a*g&#xA;    #define g(a) f(a)&#xA;    f(2)(9)&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;The tokens subjected to macro replacement are those that constitute the&#xA;invocation line &lt;code&gt;f(2)(9)&lt;/code&gt;. The &lt;code&gt;active-macro-stack&lt;/code&gt; is initially empty.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>vc4: cube demo - &#39;from scratch&#39;</title>
+      <link>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/07/04/vc4-cube-demo-from-scratch/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates a partial recreation of the&#xA;&lt;a href=&#34;https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/cube.c&#34;&gt;&lt;code&gt;vkcube&lt;/code&gt;&lt;/a&gt;&#xA;application, but&#xA;directly on the &lt;code&gt;vc4&lt;/code&gt; GPU, without involving any of the software graphics APIs.&#xA;It is a partial recreation, as the only behavior it demonstrates is a&#xA;&lt;a href=&#34;https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/lunarg.ppm.h&#34;&gt;&lt;code&gt;LunarG&lt;/code&gt;&lt;/a&gt;&#xA;cube, rotating on its Y-axis. &lt;code&gt;vkcube&lt;/code&gt; additionally supports speeding up or&#xA;slowing down the spinning cube, and reversing the direction of the spin.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>vc4: Winding Order</title>
+      <link>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</link>
+      <pubDate>Fri, 30 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/30/vc4-winding-order/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates the effects of the triangle winding order on the render.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;preparation&#34;&gt;&lt;strong&gt;Preparation:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;RPi &lt;code&gt;vc4&lt;/code&gt; GPU, by default, assumes CCW winding order as denoting the front-face&#xA;of a triangle. The GPU also assumes that the start of the frame-buffer holds&#xA;the bottom-left pixel of the render. Effectively, the GPU adheres to a&#xA;typical Cartesian coordinate system - the bottom-left corner is the origin, and&#xA;the Y coordinate increases as it moves up.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>vc4: T-format Textures</title>
+      <link>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</link>
+      <pubDate>Tue, 27 Jun 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2023/06/27/vc4-t-format-textures/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post describes the layout of the &lt;code&gt;vc4&lt;/code&gt; T-format textures.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;preparation&#34;&gt;&lt;strong&gt;Preparation:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;RPi &lt;code&gt;vc4&lt;/code&gt; GPU consumes textures that are either in &lt;code&gt;T-format&lt;/code&gt;, or in&#xA;&lt;code&gt;LT-format&lt;/code&gt;.&#xA;Quoting the &lt;a href=&#34;https://docs.broadcom.com/doc/12358545&#34;&gt;VideoCoreIV-AG100-R&lt;/a&gt;&#xA;reference guide:&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;The hardware automatically determines type of image (T-format or LT-format)&#xA;by looking at LOD dimensions. The hardware assumes a level is in T-format&#xA;unless either the width or height for the level is less than one T-format&#xA;tile. In this case use the hardware assumes the level is stored in LT-format.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: Texture</title>
+      <link>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/27/hd-7350-demo-texture/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates utilizing an image as a texture, to add details to the&#xA;surface of a square. The image is the one used&#xA;&lt;a href=&#34;https://vulkan-tutorial.com/Texture_mapping/Images&#34;&gt;here&lt;/a&gt;.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;preparation&#34;&gt;&lt;strong&gt;Preparation:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The texture image is a JPEG of size 512x512. Extract the raw pixels in R8G8B8A8&#xA;format (equivalent to ABGR32, or 0xaabbggrr):&lt;/p&gt;&#xA;&lt;pre&gt;&lt;code&gt;$ convert -size 512x512 -depth 8 texture.jpg RBGA:texture.bin&#xA;$ xxd -i texture.bin&#xA;&lt;/code&gt;&lt;/pre&gt;&#xA;&lt;p&gt;The demo doesn&amp;rsquo;t yet have image-loading capability, hence the help being&#xA;requested from &lt;code&gt;xxd&lt;/code&gt; to convert the raw pixels into a C-style array that can be&#xA;easily inserted into the demo.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: MSAA 8x</title>
+      <link>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates the HD7350 support for MSAA rendering, through the use&#xA;of Color Mask and Fragment Mask, the former of which facilitates Fast Clear of&#xA;a render surface, and the latter, allows drawing on compressed MSAA surfaces.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;color-mask&#34;&gt;&lt;strong&gt;Color Mask:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The Color Mask, or CMask, is a buffer, of size corresponding to the size of the&#xA;target surface to which it is attached, which allows the GPU to mark the&#xA;target surface as clear, without having to actually write the pixels on to the&#xA;target surface. The state of the control bits stored in the CMask buffer allows&#xA;the GPU to mark corresponding regions of the target surface as clear.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>HD 7350 demo: A Triangle</title>
+      <link>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</link>
+      <pubDate>Tue, 31 May 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/05/31/hd-7350-demo-a-triangle/</guid>
+      <description>&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update1&#34;&gt;Update #1&lt;/a&gt; on: 2nd June, 2022.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;&lt;em&gt;&lt;a href=&#34;#update2&#34;&gt;Update #2&lt;/a&gt; on: 5th June, 2022.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates setting up a HD7350 pipeline to draw a triangle.&#xA;The approach adopted here is that of choosing bare-metal programming over&#xA;relying on established interfaces like the Linux DRM.&#xA;That is not to say that Linux DRM&#xA;cannot be used - it is possible to send compute or rendering commands to the&#xA;GPU by directly interfacing with the DRM layer on Linux, or by moving up to an&#xA;even higher abstraction provided by OpenGL/Vulkan APIs.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>G73/NV4B demo: Fan Control</title>
+      <link>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/11/08/g73/nv4b-demo-fan-control/</guid>
+      <description>&lt;p&gt;This is a demonstration of controlling the stock fan. The demo is based on the&#xA;DCB details pasted on the&#xA;&lt;a href=&#34;https://asurati.github.io/wip/wip/post/2021/10/02/qpu-demo-nv-shader&#34;&gt;GPU Passthrough, and EDID access&lt;/a&gt;&#xA;post.&lt;/p&gt;&#xA;&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may cause harm to the&#xA;devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;the-dcb-gpio-assignment-table&#34;&gt;&lt;strong&gt;The DCB: GPIO Assignment Table&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The offset to the GPIO Assignment table itself lies at offset &lt;code&gt;0xa&lt;/code&gt;&#xA;from the start of the DCB.&lt;/p&gt;&#xA;&lt;p&gt;The DCB starts at offset &lt;code&gt;0x8dd6&lt;/code&gt; within my BIOS ROM.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>G73/NV4B demo: GPU Passthrough, and EDID access</title>
+      <link>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</link>
+      <pubDate>Fri, 22 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/22/g73/nv4b-demo-gpu-passthrough-and-edid-access/</guid>
+      <description>&lt;p&gt;This demo utilizes the &lt;a href=&#34;https://www.kernel.org/doc/Documentation/vfio.txt&#34;&gt;VFIO&lt;/a&gt;&#xA;feature of the Linux kernel to pass through a&#xA;&lt;a href=&#34;https://www.techpowerup.com/gpu-specs/geforce-7600-gt.c152&#34;&gt;GeForce 7600 GT&lt;/a&gt;&#xA;GPU to a guest VM running on the host. Then, the program running inside the&#xA;guest VM configures a DDC (an I&lt;sup&gt;2&lt;/sup&gt;C) bus on the GPU to access the&#xA;EDID blocks of the attached display.&lt;/p&gt;&#xA;&lt;p&gt;The details about parsing the Video BIOS, and about driving the DDC bus were&#xA;found by reading the&#xA;&lt;a href=&#34;http://download.nvidia.com/open-gpu-doc/DCB/1/DCB-4.0-Specification.html&#34;&gt;DCB Specification&lt;/a&gt;&#xA;and, the source code for the&#xA;&lt;a href=&#34;https://lxr.missinglinkelectronics.com/linux/drivers/gpu/drm/nouveau/&#34;&gt;&lt;code&gt;nouveau&lt;/code&gt;&lt;/a&gt;&#xA;driver.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Driving the HDMI Display Pipeline</title>
+      <link>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</guid>
+      <description>&lt;p&gt;The demos have been relying on the firmware to setup the HDMI display pipeline&#xA;and to provide them with a frame buffer to draw on.&lt;/p&gt;&#xA;&lt;p&gt;The program found &lt;a href=&#34;https://github.com/asurati/x03/blob/main/dev/disp.c&#34;&gt;here&lt;/a&gt;&#xA;attempts to take the control of the pipeline from the firmware, and run it&#xA;on its own.&lt;/p&gt;&#xA;&lt;p&gt;Because of the lack of documentation, the Linux &lt;code&gt;vc4&lt;/code&gt; driver was consulted&#xA;to determine the registers to setup and the sequence of steps necessary, to&#xA;disable and enable the pipeline.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Pixel Clock: PLLH_PIX</title>
+      <link>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</link>
+      <pubDate>Thu, 14 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</guid>
+      <description>&lt;p&gt;This post investigates the programming of the HDMI &lt;code&gt;pixel&lt;/code&gt; clock, performed by&#xA;the RPi firmware to push the pixels into the HDMI encoder at that frequency.&lt;/p&gt;&#xA;&lt;p&gt;Booting with the RPi firmware and the U-Boot, the actual resolution of the&#xA;display is 1920x1080@60Hz. The resolution of the frame buffer might be lower -&#xA;the HVS takes care of appropriately scaling and positioning the pixels.&lt;/p&gt;&#xA;&lt;p&gt;Below is the &lt;code&gt;Modeline&lt;/code&gt; details about the 1920x1080@60Hz resolution. These&#xA;details were extracted out of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Extended_Display_Identification_Data&#34;&gt;EDID&lt;/a&gt; information gathered from the monitor:&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Export HVS output to the system RAM</title>
+      <link>https://asurati.github.io/wip/post/2021/10/08/qpu-demo-export-hvs-output-to-the-system-ram/</link>
+      <pubDate>Fri, 08 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/08/qpu-demo-export-hvs-output-to-the-system-ram/</guid>
+      <description>&lt;p&gt;This demo presents a way to configure HVS FIFO2/Channel2 and the Transposer&#xA;(TXP) block to gather the scaled/converted/transformed scan-lines into a buffer&#xA;inside the system RAM.&lt;/p&gt;&#xA;&lt;p&gt;The HVS FIFO2 has a choice in how its output is consumed - it can be consumed&#xA;either by PV1, or by the TXP block. The RPi firmware, by default, seems to&#xA;disable the FIFO2 output (&lt;code&gt;DSP3_MUX&lt;/code&gt;), so that it is not connected to PV1. This is&#xA;very fortunate, as the firmware has already done a part of the necessary setup.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>HVS and PV Settings</title>
+      <link>https://asurati.github.io/wip/post/2021/10/07/hvs-and-pv-settings/</link>
+      <pubDate>Thu, 07 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/07/hvs-and-pv-settings/</guid>
+      <description>&lt;p&gt;This post investigates the contents of the registers belonging to the&#xA;Hardware Video Scaler (HVS), and to the PixelValve (PV) devices.&lt;/p&gt;&#xA;&lt;p&gt;When a request is made to the&#xA;&lt;a href=&#34;https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface#allocate-buffer&#34;&gt;MailBox&lt;/a&gt;&#xA;interface for a Frame Buffer with required properties, the RPi firmware&#xA;programs the HVS and the PV in order to drive the display accordingly.&lt;/p&gt;&#xA;&lt;p&gt;The demos have been requesting a resolution of 640x480, 32bpp, with a default&#xA;pixel order of BGRA8888 (0xaarrggbb, or ARGB32).&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with MSAA 4x</title>
+      <link>https://asurati.github.io/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/</link>
+      <pubDate>Tue, 05 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/05/qpu-demo-triangle-with-msaa-4x/</guid>
+      <description>&lt;p&gt;This demo works with the same triangle as seen in earlier demos; the demo&#xA;utilizes the full 3D pipeline, employs Coordinate and Vertex shaders that&#xA;are not merely pass-through but that perform the Perspective and ViewPort&#xA;transformations (the Model and Camera/View transformations are assumed to have&#xA;been performed outside), and enables 4x multi-sampling for a smoother display&#xA;of the triangle.&lt;/p&gt;&#xA;&lt;p&gt;The Coordinate and Vertex shaders perform the Matrix-Vector multiplication, in&#xA;order to calculate the Clip Coordinates of each vertex, perform the Perspective&#xA;divide to calculate the Normalized Device Coordinates, and perform the&#xA;ViewPort Transformation to calculate the Screen Coordinates relative to the&#xA;ViewPort Centre. The Vertex Shader additionally passes through the colour&#xA;information of each vertex.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with a GL Pass-Through Shader</title>
+      <link>https://asurati.github.io/wip/post/2021/10/04/qpu-demo-triangle-with-a-gl-pass-through-shader/</link>
+      <pubDate>Mon, 04 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/04/qpu-demo-triangle-with-a-gl-pass-through-shader/</guid>
+      <description>&lt;p&gt;This demo results in the same output image as displayed in&#xA;&lt;a href=&#34;https://asurati.github.io/wip/wip/post/2021/10/02/qpu-demo-nv-shader&#34;&gt;Triangle With NV Shader&lt;/a&gt;, but this&#xA;time the full 3D pipeline is employed, with the exception that the Coordinate&#xA;and the Vertex Shaders are mere pass-through shaders.&lt;/p&gt;&#xA;&lt;p&gt;The Coordinate and the Vertex Shaders are each tasked with reading the input&#xA;vertex attributes off the VPM (placed there by the Vertex Cache Manager), and&#xA;writing shaded vertices in specific output formats back into the VPM.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Triangle with NV Shader</title>
+      <link>https://asurati.github.io/wip/post/2021/10/02/qpu-demo-triangle-with-nv-shader/</link>
+      <pubDate>Sat, 02 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/02/qpu-demo-triangle-with-nv-shader/</guid>
+      <description>&lt;p&gt;This demo presents a method of programming the GPU to display a triangle, with&#xA;the interpolation of the colours at the pixels covered by it. The graphics&#xA;concepts used here borrow heavily from those of OpenGL.&lt;/p&gt;&#xA;&lt;p&gt;The GPU pipeline supports running in non-vertex-shading mode, or the NV mode.&#xA;In this mode, pre-shaded vertices are presented to the pipeline. That is,&#xA;the jobs of coordinate and vertex shader are done outside of the pipeline. In&#xA;this demo, those jobs/calculations are done by hand, to produce the pre-shaded&#xA;vertices in the format expected by the mode (see the section&#xA;&lt;em&gt;Shaded Vertex Format in Memory&lt;/em&gt; in the specification for the layout of the&#xA;format).&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Binary NOT operation</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-binary-not-operation/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-binary-not-operation/</guid>
+      <description>&lt;p&gt;This demo builds upon&#xA;&lt;a href=&#34;https://asurati.github.io/wip/wip/post/2021/09/28/qpu-demo-dma-transfers/&#34;&gt;QPU Demo: DMA Transfers&lt;/a&gt;,&#xA;and presents a method of importing four 16-element vectors of integers&#xA;from VPM to QPU registers, performing a binary NOT on the elements, and&#xA;exporting the results back to the VPM.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;transfer-methods&#34;&gt;&lt;strong&gt;Transfer Methods:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;For QPU to be able to access the vectors and perform any calculations on them,&#xA;they must first be brought from the system RAM, where they usually resides,&#xA;into the VPM. This was a topic of the second demo.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: DMA Transfers</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-dma-transfers/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-dma-transfers/</guid>
+      <description>&lt;p&gt;This demo presents a method of programming the V3D DMA controller to&#xA;transfer four 16-element vectors of integers back and forth between the system&#xA;RAM and the VPM.&lt;/p&gt;&#xA;&lt;p&gt;It is natural for the QPU to work with 16-element vectors. To that end, its&#xA;registers can accommodate 16 32-bit values (there are indeed a few exceptions,&#xA;however).&lt;/p&gt;&#xA;&lt;p&gt;In AMD terminology, a QPU can be said to process a wavefront made up of 16&#xA;workitems.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>QPU Demo: Interrupting the host</title>
+      <link>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-interrupting-the-host/</link>
+      <pubDate>Tue, 28 Sep 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/09/28/qpu-demo-interrupting-the-host/</guid>
+      <description>&lt;p&gt;This is the first in hopefully a few more articles demonstrating one of the&#xA;ways in which the RPi&amp;rsquo;s VideoCoreIV (vc4) GPU can be programmed.&lt;/p&gt;&#xA;&lt;p&gt;The 3D engine, V3D, is driven by the SIMD16 (physically SIMD4, but multiplexed&#xA;over four consecutive clock cycles) processors known as QPUs, Quad Processing Units,&#xA;or Quad Processors.&lt;/p&gt;&#xA;&lt;p&gt;In February 2014, Broadcom&#xA;&lt;a href=&#34;https://www.raspberrypi.org/blog/a-birthday-present-from-broadcom/&#34;&gt;released&lt;/a&gt;&#xA;a &lt;a href=&#34;https://docs.broadcom.com/doc/12358545&#34;&gt;specification&lt;/a&gt;&#xA;detailing the vc4 V3D architecture. That document is the primary basis&#xA;supporting the work demonstrated here.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>About w-i-p</title>
+      <link>https://asurati.github.io/wip/about/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/about/</guid>
+      <description>&lt;p&gt;Work-In-Progress.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

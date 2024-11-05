@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HD 7350 demo: A Triangle | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">HD 7350 demo: A Triangle</span></h1>
+
+<h2 class="date">2022/05/31</h2>
+</div>
+
+<main>
+<p><em><a href="#update1">Update #1</a> on: 2nd June, 2022.</em></p>
+<p><em><a href="#update2">Update #2</a> on: 5th June, 2022.</em></p>
+<hr>
+<p><em>Warning: Improperly programming a GPU, or a display, may damage the devices.</em></p>
+<p>This post demonstrates setting up a HD7350 pipeline to draw a triangle.
+The approach adopted here is that of choosing bare-metal programming over
+relying on established interfaces like the Linux DRM.
+That is not to say that Linux DRM
+cannot be used - it is possible to send compute or rendering commands to the
+GPU by directly interfacing with the DRM layer on Linux, or by moving up to an
+even higher abstraction provided by OpenGL/Vulkan APIs.</p>
+<p>The bare-metal program maps the PCIe BARs, POSTs the Video BIOS, configures and
+tests the GPU rings (GFX, DMA, INT), parses the EDID blocks of the attached
+display, and configures the GPU HW blocks (CRTCs, ENCODERs, TRANSMITTERs)
+for running the display at the preferred resolution. The Linux <code>radeon</code> driver
+and the AMD manuals provide the details on the steps required.</p>
+<p>It then prepares a command buffer for a draw call, linking into it
+various resources such as the Color Buffer (i.e. the Frame Buffer the GPU is
+scanning out), the Vertex Buffer, and the buffers containing the Shader
+programs. Finally, it sends the command buffer for execution to the GPU&rsquo;s
+Graphics (GFX) ring.</p>
+<hr>
+<h3 id="setup"><strong>Setup:</strong></h3>
+<p>The <a href="https://en.wikipedia.org/wiki/Ati_gpu#Radeon_7000_series">HD7350</a> is a
+member, named Cedar, of the VLIW-5 TeraScale 2 Evergreen family of the AMD GPUs.</p>
+<p>It has a single <a href="https://en.wikipedia.org/wiki/DMS-59">DMS-59</a> port. A
+DMS-59-to-dual-DVI break-out cable exposes the more prevalent DVI outputs. A
+DVI-to-HDMI cable connects one of those DVI outputs to a cheap USB-based HDMI
+Video Capture device. The video-capture device appears to the GPU as a display.</p>
+<p>The GPU is passed through to a VM running on the host machine. The host machine
+runs the <a href="https://obsproject.com/">OBS Studio</a> software to capture and display
+the GPU output.</p>
+<hr>
+<h3 id="mesa-and-the-manuals"><strong>MESA and the Manuals:</strong></h3>
+<p>The manuals released by AMD contain information on the architecture of the GPU,
+the register and buffer formats, and the shader ISA. The Gallium <code>r600</code> driver
+within MESA provides the preferred/correct sequence of commands.</p>
+<p>These are the manuals that were helpful:</p>
+<ul>
+<li><a href="https://developer.amd.com/wordpress/media/2012/10/AMD_Evergreen-Family_Instruction_Set_Architecture.pdf">Evergreen Family Instruction Set Architecture: Instructions and
+Microcode</a></li>
+<li><a href="http://developer.amd.com/wordpress/media/2013/10/evergreen_cayman_programming_guide.pdf">Radeon Evergreen/Northern Islands Acceleration</a></li>
+<li><a href="http://developer.amd.com/wordpress/media/2013/10/evergreen_3D_registers_v2.pdf">Radeon Evergreen 3D Register Reference Guide</a></li>
+<li><a href="http://developer.amd.com/wordpress/media/2013/10/R5xx_Acceleration_v1.5.pdf">Radeon R5xx Acceleration</a></li>
+<li><a href="https://developer.amd.com/wordpress/media/2012/10/R600-R700-Evergreen_Assembly_Language_Format.pdf">R600/R700/Evergreen Assembly Language Format</a></li>
+<li><a href="http://developer.amd.com/wordpress/media/2013/10/R6xx_R7xx_3D.pdf">Radeon R6xx/R7xx Acceleration</a></li>
+<li><a href="https://developer.amd.com/wordpress/media/2013/10/R6xx_3D_Registers.pdf">Radeon R6xx/R7xx 3D Register Reference Guide</a></li>
+<li><a href="http://developer.amd.com/wordpress/media/2013/10/CIK_3D_registers_v2.pdf">Radeon Sea Islands 3D/Compute Register Reference Guide</a></li>
+<li><a href="https://developer.amd.com/wordpress/media/2013/10/SI_3D_registers.pdf">Radeon Southern Islands 3D/Compute Register Reference Guide</a></li>
+</ul>
+<hr>
+<h3 id="shaders"><strong>Shaders:</strong></h3>
+<p>The shaders, required by a demo as simple as this one, are only a few:</p>
+<ul>
+<li><strong>VS</strong> (Vertex Shader)</li>
+<li><strong>FS</strong> (Fetch Shader)</li>
+<li><strong>PS</strong> (Pixel Shader)</li>
+</ul>
+<hr>
+<h3 id="vertex-shader"><strong>Vertex Shader:</strong></h3>
+<p>The vertices, provided as an input to the GPU, are already in the Normalized
+Device Coordinate space. As a result, it suffices for the VS to be a
+pass-through shader.</p>
+<p>It relies on the FS to pull the vertex properties from the Vertex Buffer. Each
+vertex has two properties, a POSITION, and a COLOR parameter. It then exports
+them to appropriate buffers - POSITION into the Position Buffer, and the COLOR
+parameter into the Parameter Cache.</p>
+<p>In order to take advantage of the GPU&rsquo;s support for semantic independence (a
+facility to reduce dependencies) between the VS and the FS, the FS utilizes a
+semantic table to store the properties into registers designated by the table.</p>
+<p>With the help of such a facility, the FS does not need to know the exact
+registers in which the VS expects to receive the vertex properties, and the VS
+can easily change its register allocation patterns without changing the FS
+code.</p>
+<p>The binary code:</p>
+<pre><code>00 00 00 00 00 04 c0 84  3c a0 00 00 88 06 00 95
+00 40 01 00 88 06 20 95
+
+PC| Offset|     Instruction Words
+--+-------+----------------------
+ 0|   0x00| 0x00000000 0x84c00400
+ 1|   0x08| 0x0000a03c 0x95000688
+ 2|   0x10| 0x00014000 0x95200688
+</code></pre>
+<p>PC is in the units of 64 bits, relative to the start of the respective
+shader. The instructions in the shader ISA are either 64 or 128 bits in length.
+Each instruction must fall on a naturally aligned address in the memory. The
+starting address of a shader must be aligned on a 256-byte boundary.</p>
+<p>All shaders begin their execution with an instruction of type
+<em>Control Flow (CF)</em>.</p>
+<hr>
+<h4 id="vs0"><strong>VS[0]:</strong></h4>
+<pre><code>PC| Offset|   CF_WORD0|   CF_WORD1|
+--+-------+-----------+-----------+
+ 0|   0x00| 0x00000000| 0x84c00400|
+
+   res| jts|                          addr|
+0 0000| 000| 0000 0000 0000 0000 0000 0000|
+
+b| wqm|      inst| eop| vpm| rsvd|   count| cond|  const| pop|
+1|   0| 0001 0011|   0|   0| 0000| 00 0001|   00| 0 0000| 000|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>addr</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The <code>inst</code> field shows that this is a <code>CF_INST_CALL_FS</code> instruction. Hence, this <code>addr</code> field is a PC, relative to the start of the FS, that the GPU should call. The GPU pushes the return address (the address of the instruction next to this one) onto a stack; the FS executes <code>CF_INST_RETURN</code> when it wants to return.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>count</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>The increment to apply to Call Nesting Counter. Used to avoid reaching a call-nesting of unsupported depths.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>0x13</code></td>
+          <td><code>CF_INST_CALL_FS</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>b</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>Barrier. Wait for other CF instructions to complete before beginning this one.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="vs1"><strong>VS[1]:</strong></h4>
+<p>The <code>inst</code> field of this CF instruction is <code>0x54</code>, which stands for
+<code>CF_INST_EXPORT_DONE</code>. This information suggests that the current instruction
+is not only a CF instruction like the one above, but it is a sub-type of the
+CF instructions, particularly the
+<em>&ldquo;CF Allocate, Import, or Export of the Swizzle kind&rdquo;</em> instructions. The
+format should, therefore, be appropriately decoded.</p>
+<pre><code>PC| Offset| CF_ALLOC_EXPORT_WORD0| CF_ALLOC_EXPORT_WORD1_SWIZ|
+--+-------+----------------------+---------------------------+
+ 1|   0x08|            0x0000a03c|                 0x95000688|
+
+es|   ix_gpr| rw_rel|   rw_gpr| type|       array_base|
+00| 000 0000|      0| 000 0001|   01| 0 0000 0011 1100|
+
+b| m|      inst| eop| vpm| count| rsvd| sel_w| sel_z| sel_y| sel_x|
+1| 0| 0101 0100|   0|   0|  0000| 0000|   011|   010|   001|   000|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>array_base</code></td>
+          <td style="text-align: right"><code>0x3c</code></td>
+          <td>Position Index. Must be <code>0x3c == 60</code> when exporting the POSITION property (see <code>type</code> below) of a vertex.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>type</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>EXPORT_POS</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>rw_gpr</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>The register#, <code>R1</code>, that contains the POSITION, and acts as the source register for the export. As described later, the semantic table guides the FS into placing the POSITION property of a vertex into the <code>R1</code> register.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>sel_x</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The X (<code>sel_x</code>) channel of the XYZW vector being exported must be sourced from the channel <code>0</code> of the source register, i.e. <code>R1.X</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>sel_y</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>The Y (<code>sel_y</code>) channel of the XYZW vector being exported must be sourced from the channel <code>1</code> of the source register, i.e. <code>R1.Y</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>sel_z</code></td>
+          <td style="text-align: right"><code>2</code></td>
+          <td>. . .</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>sel_w</code></td>
+          <td style="text-align: right"><code>3</code></td>
+          <td>. . .</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>count</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The number of POSITIONs exported, minus one.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>0x54</code></td>
+          <td><code>CF_INST_EXPORT_DONE</code>. The <code>DONE</code> suffix suggests that this is the last (and, in this case, the only one) of all the POSITIONs being exported.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="vs2"><strong>VS[2]:</strong></h4>
+<p>Similar to the one directly above, but exports one PARAMETER: the COLOR
+parameter.</p>
+<pre><code>PC| Offset| CF_ALLOC_EXPORT_WORD0| CF_ALLOC_EXPORT_WORD1_SWIZ|
+--+-------+----------------------+---------------------------+
+ 2|   0x10|            0x00014000|                 0x95200688|
+
+es|   ix_gpr| rw_rel|   rw_gpr| type|       array_base|
+00| 000 0000|      0| 000 0010|   10| 0 0000 0000 0000|
+
+b| m|      inst| eop| vpm| count| rsvd| sel_w| sel_z| sel_y| sel_x|
+1| 0| 0101 0100|   1|   0|  0000| 0000|   011|   010|   001|   000|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>array_base</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Parameter Index. Must be 0 for the first (and, in this case, the only) PARAMETER being exported. The strict sequence (0, 1, 2, etc..) seems to be necessary if the PS relies on <em>Direct Parameter Reads</em> that support hardware-assisted addressing of the Parameter Cache.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>type</code></td>
+          <td style="text-align: right"><code>2</code></td>
+          <td><code>EXPORT_PARAM</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>rw_gpr</code></td>
+          <td style="text-align: right"><code>2</code></td>
+          <td>The register#, <code>R2</code>, that contains the COLOR parameter, and acts as the source register for the export. As described later, the semantic table guides the FS into placing the COLOR parameter of a vertex into the <code>R2</code> register.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>count</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The number of PARAMETERs exported, minus one.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>eop</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>End Of this Program.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>0x54</code></td>
+          <td><code>CF_INST_EXPORT_DONE</code>. The <code>DONE</code> suffix suggests that this is the last (and, in this case, the only one) of all the PARAMETERs being exported.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h3 id="fetch-shader"><strong>Fetch Shader:</strong></h3>
+<p>As can be seen below, the FS consists of two types of instructions: the CF
+instructions that begin the FS, which are 64-bit instructions, and the VFC
+(Vertex Fetch Clause) instructions, which are 128-bit instructions. The PC
+still remains displayed in 64-bit units, however. As before, the PC and the
+Offset both are relative to the start of the FS.</p>
+<pre><code>02 00 00 00 00 04 80 80  00 00 00 00 00 00 00 85
+01 1f 00 30 90 10 15 4c  00 00 00 00 00 00 00 00
+01 1f 00 30 92 10 15 4c  0c 00 00 00 00 00 00 00
+
+PC| Offset|     Instruction Words
+--+-------+--------------------------------------------
+ 0|   0x00| 0x00000002 0x80800400
+ 1|   0x08| 0x00000000 0x85000000
+ 2|   0x10| 0x30001f01 0x4c151090 0x00000000 0x00000000
+ 4|   0x20| 0x30001f01 0x4c151092 0x0000000c 0x00000000
+</code></pre>
+<hr>
+<h4 id="fs0"><strong>FS[0]:</strong></h4>
+<pre><code>PC| Offset|   CF_WORD0|   CF_WORD1|
+--+-------+-----------+-----------+
+ 0|   0x00| 0x00000002| 0x80800400|
+
+   res| jts|                          addr|
+0 0000| 000| 0000 0000 0000 0000 0000 0010|
+
+b| wqm|      inst| eop| vpm| rsvd|   count| cond|  const| pop|
+1|   0| 0000 0010|   0|   0| 0000| 00 0001|   00| 0 0000| 000|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>addr</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The <code>inst</code> field shows that this is a <code>CF_INST_VC</code> instruction. Hence, this <code>addr</code> field is a PC, relative to the start of this shader, where begins a Vertex Fetch Clause.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>count</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>The number of instructions in the clause, minus one. There are 2 instructions in the VFC clause that follows. Note that this count hides the fact that the clause instructions are 128-bit each, while the PC, by being even and by being incremented twice when running the clause, does not. This instruction is can be thought of as a stack-less call; the GPU jumps to the clause, executes <code>count</code> number of clause instructions, and then returns back to the instruction next to this.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>2</code></td>
+          <td><code>CF_INST_VC</code>.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="fs1"><strong>FS[1]:</strong></h4>
+<pre><code>PC| Offset|   CF_WORD0|   CF_WORD1|
+--+-------+-----------+-----------+
+ 1|   0x08| 0x00000000| 0x85000000|
+
+   res| jts|                          addr|
+0 0000| 000| 0000 0000 0000 0000 0000 0000|
+
+b| wqm|      inst| eop| vpm| rsvd|   count| cond|  const| pop|
+1|   0| 0001 0100|   0|   0| 0000| 00 0000|   00| 0 0000| 000|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>0x14</code></td>
+          <td><code>CF_INST_RETURN</code>. Return back to the VS.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="fs2-vfc0"><strong>FS[2], VFC[0]:</strong></h4>
+<p>This is a Vertex Fetch Clause instruction, particularly a fetch instruction
+depending on the FS-VS semantic table to determine the register that is to
+receive the fetched information.</p>
+<pre><code>PC| Offset|  VTX_WORD0|  VTX_WORD1_SEM|  VTX_WORD2|     ZEROES|
+--+-------+-----------+---------------+-----------+-----------+
+ 2|   0x10| 0x30001f01|     0x4c151090| 0x00000000| 0x00000000|
+
+    mfc| ssx| sr|  src_gpr|    buf_id| fwq| ft|   inst|
+00 1100|  00|  0| 000 0000| 0001 1111|   0| 00| 0 0001|
+
+sma| fca| nfa|     fmt| ucf| dsw| dwz| dwy| dwx| rsvd|    sem_id|
+  0|   1|  00| 11 0000|   0| 101| 010| 001| 000|    0| 1001 0000|
+
+       rsvd| bim| alt_const| mf| cbns| es|              offset|
+0 0000 0000|  00|         0|  0|    0| 00| 0000 0000 0000 0000|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>VC_FETCH_SEMANTIC</code>. Fetch vertex property, relying on the FS-VS semantic table to direct the fetched property into appropriate register.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>ft</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td><code>VTX_FETCH_VERTEX_DATA</code>. Pass the vertexID (and not the instanceID) to identify the entity for which the fetch is being performed.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>buf_id</code></td>
+          <td style="text-align: right"><code>0x1f</code></td>
+          <td>Index into the MMIO Resource/Constant Descriptor Table. Each entry in the table is 32-bytes, and provides information on the address and size of the buffer from which to fetch.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>src_gpr</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The vertexID is found in <code>R0</code>. The Shader Pipe Interpolator (SPI) places vertexID into <code>R0.X</code> before calling the VS.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>ssx</code></td>
+          <td style="text-align: right">&lsquo;0&rsquo;</td>
+          <td>The vertexID is found in the X channel of the Source GPR.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>sem_id</code></td>
+          <td style="text-align: right"><code>0x90</code></td>
+          <td>Programmer-defined semanticID that identifies the vertex property being fetched and also the destination GPR that FS should write into. In this demo, it identifies the POSITION property, and the <code>R1</code> register. See the contents of the FS-VS semantic table in the command buffer description, later.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dsx</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Destination GPR&rsquo;s X (<code>dsx</code>) channel should be filled with the fetched vector&rsquo;s 0 (<code>X</code>)</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dsy</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>Destination GPR&rsquo;s Y (<code>dsy</code>) channel should be filled with the fetched vector&rsquo;s 1 (<code>Y</code>)</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dsz</code></td>
+          <td style="text-align: right"><code>2</code></td>
+          <td>Destination GPR&rsquo;s Z (<code>dsz</code>) channel should be filled with the fetched vector&rsquo;s 2 (<code>Z</code>)</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dsw</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td>Destination GPR&rsquo;s W (<code>dsw</code>) channel should be filled with <code>1.0</code>. This is because we only define XYZ co-ordinates for each vertex in the Vertex Buffer, so the <code>W</code> channel is absent in the buffer. Moreover, since we disable Clipping, the co-ordinates are taken to be already in the Normalized Device Coordinate space. This channel seems to be ignored under the sparse settings established by this demo. Nevertheless, set it as if the Perspective Divide has been already performed.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>fmt</code></td>
+          <td style="text-align: right"><code>0x30</code></td>
+          <td><code>FMT_32_32_32_FLOAT</code>. The XYZ channels of a vertex position is in 4-byte floats.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>nfa</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td><code>NUM_FORMAT_NORM</code>. A fraction between [0,1] if unsigned, or between [-1,1] if signed. Note that the demo passes NDCs to the GPU.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>fca</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>FORMAT_COMP_SIGNED</code>. Signed numbers. See also <code>nfa</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>offset</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Byte offset into the Vertex Buffer, from where to begin fetching this vertex property.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="fs4-vfc1"><strong>FS[4], VFC[1]:</strong></h4>
+<p>Similar to above, but fetches the COLOR parameter.</p>
+<pre><code>PC| Offset|  VTX_WORD0|  VTX_WORD1_SEM|  VTX_WORD2|     ZEROES|
+--+-------+-----------+---------------+-----------+-----------+
+ 4|   0x20| 0x30001f01|     0x4c151092| 0x0000000c| 0x00000000|
+
+    mfc| ssx| sr|  src_gpr|    buf_id| fwq| ft|   inst|
+00 1100|  00|  0| 000 0000| 0001 1111|   0| 00| 0 0001|
+
+sma| fca| nfa|     fmt| ucf| dsw| dwz| dwy| dwx| rsvd|    sem_id|
+  0|   1|  00| 11 0000|   0| 101| 010| 001| 000|    0| 1001 0010|
+
+       rsvd| bim| alt_const| mf| cbns| es|              offset|
+0 0000 0000|  00|         0|  0|    0| 00| 0000 0000 0000 1100|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>sem_id</code></td>
+          <td style="text-align: right"><code>0x92</code></td>
+          <td>Programmer-defined semanticID that identifies the vertex property being fetched and also the destination GPR that FS should write into. In this demo, it identifies the COLOR parameter, and the <code>R2</code> register. See the contents of the FS-VS semantic table in the command buffer description, later.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dsw</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td>Destination GPR&rsquo;s W (<code>dsw</code>) channel should be filled with <code>1.0</code>. This is because we only define RGB values for the COLOR parameter of each vertex in the Vertex Buffer, so the <code>W</code>, i.e. the Alpha, channel is absent in the buffer. Set it to 1.0 (completely opaque).</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>offset</code></td>
+          <td style="text-align: right"><code>0xc</code></td>
+          <td>Byte offset into the Vertex Buffer, from where to begin fetching this vertex property. The previous property was POSITION, and was of size <code>4 * 3 = 12</code> bytes. The COLOR property immediately follows it, for each vertex.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h3 id="pixel-shader"><strong>Pixel Shader:</strong></h3>
+<p>Just as there is a support for semantic independence between the FS and the VS,
+there is a similar support provided between the VS and the FS. But, the
+PARAMETER exports from the VS do not go into GPRs - they go to the Parameter
+Cache. The layout of the exported parameters are available in the documents.</p>
+<p>It seems that the Parameter Cache fills itself starting at its base; so any
+semantic mapping which does not start parameter allocations at the base of the
+cache, but which nudges the automatic hardware addressing facility to try and
+attempt &lsquo;random accesses&rsquo; into the cache, fail. As a result, this demo keeps
+the semantic mapping simple: VS export of the COLOR parameter is associated
+with the 0th entry in the VS-PS semantic table. If there were another parameter
+being exported by the VS, it would have been associated with the 1st entry, and
+so on. The driver in MESA too follows the same consecutive assignment.</p>
+<p>As with FS-VS semantic table, the command buffer is the place where the VS-PS
+semantic table is setup.</p>
+<pre><code>02 00 00 00 00 00 14 a0  00 80 00 00 88 0a 20 95
+00 04 38 00 90 6c 34 40  00 00 38 80 80 6c 34 60
+00 04 38 00 10 6b 34 00  00 00 38 00 10 6b 34 20
+00 04 38 00 00 6b 34 40  00 00 38 80 00 6b 34 60
+
+PC| Offset|     Instruction Words
+--+-------+----------------------
+ 0|   0x00| 0x00000002 0xa0140000
+ 1|   0x08| 0x00008000 0x95200a88
+ 2|   0x10| 0x00380400 0x40346c90
+ 3|   0x18| 0x80380000 0x60346c80
+ 4|   0x20| 0x00380400 0x00346b10
+ 5|   0x28| 0x00380000 0x20346b10
+ 6|   0x30| 0x00380400 0x40346b00
+ 7|   0x38| 0x80380000 0x60346b00
+</code></pre>
+<hr>
+<h4 id="ps0"><strong>PS[0]:</strong></h4>
+<p>The <code>inst</code> field of this CF instruction is <code>0x81</code>. This isn&rsquo;t the usual CF
+instructions, or the Alloc, Export, Import CF instruction, (check if there are
+other types to remove ambiguity), as this value isn&rsquo;t defined.</p>
+<p>The instruction belongs to the group of CF instructions that begin an ALU
+clause. The <code>inst</code> field is shorter, and its value here turns out to be <code>0x8</code>,
+which represents the <code>CF_INST_ALU</code> instruction.</p>
+<p>Note also that <em>CF ALU</em> instructions are <em>Control Flow</em> instructions used to
+initiate ALU clauses, while the <em>ALU</em> instructions belong only to the ALU
+clauses.</p>
+<pre><code>PC| Offset|   CF_ALU_WORD0|   CF_ALU_WORD1|
+--+-------+---------------+---------------+
+ 0|   0x00|     0x00000002|     0xa0140000|
+
+km0|  kb1|  kb0|                        addr|
+ 00| 0000| 0000| 00 0000 0000 0000 0000 0010|
+
+b| wqm| inst| alt_const|    count|       ka1|      ka0| km1|
+1|   0| 1000|         0| 000 0101| 0000 0000|0000 0000|  00|
+</code></pre>
+<p>The KCACHE fields are not relevant here; they are used to access Constant
+Buffers (Uniforms), for which this demo has no need. Also note that ALU clause
+instructions are 64-bits, while the Vertex Fetch Clause instructions are
+128-bits.</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>addr</code></td>
+          <td style="text-align: right"><code>2</code></td>
+          <td>The PC of the clause to execute, relative to the start of this shader.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>count</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td>The number of instructions to execute in the clause, minus one.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>8</code></td>
+          <td><code>CF_INST_ALU</code>.</td>
+      </tr>
+  </tbody>
+</table>
+<p>As with execution of other types of clauses, the GPU, before moving on to the
+next instruction in the program order, jumps to the clause found at <code>addr</code> PC,
+and executes <code>count + 1</code> number of instructions.</p>
+<hr>
+<h4 id="ps1"><strong>PS[1]:</strong></h4>
+<p>The <code>inst</code> field of this CF instruction is <code>0x54</code>, or <code>CF_INST_EXPORT_DONE</code> -
+one of the CF instruction types, seen above in the VS.</p>
+<pre><code>PC| Offset| CF_ALLOC_EXPORT_WORD0| CF_ALLOC_EXPORT_WORD1_SWIZ|
+--+-------+----------------------+---------------------------+
+ 1|   0x08|            0x00008000|                 0x95200a88|
+
+es|   ix_gpr| rw_rel|   rw_gpr| type|       array_base|
+00| 000 0000|      0| 000 0001|   00| 0 0000 0000 0000|
+
+b| m|      inst| eop| vpm| count| rsvd| sel_w| sel_z| sel_y| sel_x|
+1| 0| 0101 0100|   1|   0|  0000| 0000|   101|   010|   001|   000|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>array_base</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The index of the Color Buffer to export into. Color Buffer #0 is the one that the GPU is setup to display.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>type</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td><code>EXPORT_PIXEL</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>rw_gpr</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>The register#, <code>R1</code>, that contains the COLOR property, and acts as the source register for the export. The ALU clause that this instruction initiates interpolates the COLOR property for the current fragment, and stores the resultant color in <code>R1</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>sel_w</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td>The W (<code>sel_w</code>) (i.e. the Alpha) channel of the XYZW vector being exported must be set to <code>1.0</code>. Note that when VS exported the COLOR property for each vertex, it set Alpha to <code>1.0</code>, but that was not the property of a <em>fragment</em>. Here in the PS, each fragment is shaded; not setting Alpha to <code>1.0</code> here causes the GPU to pick-up random/left-over values for the Alpha channel. That causes unwanted transparency effects. Hence, set the Alpha channel to 1.0 for each fragment.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>count</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The number of Color Buffers to which this pixel is being exported, minus one. (Verify this)</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>eop</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>End Of this Program.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>0x54</code></td>
+          <td><code>CF_INST_EXPORT_DONE</code>. The <code>DONE</code> suffix suggests that this is the last (and, in this case, the only one) of all the Color Buffers to which this pixel is being exported.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="ps2-alu0"><strong>PS[2], ALU[0]:</strong></h4>
+<p>Note that an <code>ALU_WORD</code> isn&rsquo;t the same as a <code>CF_ALU_WORD</code>.</p>
+<p>The ALU instructions interpolate the COLOR parameter for this fragment. To
+support the interpolation, the each interpolation instructions receives two of
+V0, V1-V0 (also written as V10), and V2-V0 (also written as V20) as PARAMETERS.
+It also receives the BaryCentric
+co-ordinates I/J (or u/v in other literature) inside <code>R0.X</code> and <code>R0.Y</code>
+respectively. See the section &ldquo;5.2 Evergreen/Cayman Starting Condition&rdquo; in the
+<a href="http://developer.amd.com/wordpress/media/2013/10/evergreen_cayman_programming_guide.pdf">Radeon Evergreen/Northern Islands Acceleration</a>
+manual.</p>
+<p>The Evergreen ISA manual also describes the process of interpolation, and helps
+in understand the reason the instructions are laid out the way they are.</p>
+<p>In short, interpolating a single channel needs two instructions. The second
+instruction carries our the MAD operation: <code>tmp = V0 + I * V10</code>. The result of this
+operation is sent to the first instruction, which then performs the DOT
+operation: <code>res = tmp + J * V20</code>. The res is then written out to the
+destination channel.</p>
+<p>Each instruction in the instruction group can only write to its corresponding
+channel. That is, the ALU instruction in the X slot can write to no other
+channel except X, etc. (This limitation doesn&rsquo;t apply to the T unit).</p>
+<p>The two <code>INTERP_Z</code> instructions interpolate the Z channel; These two
+instructions must be allotted the ZW slots in the instruction group.</p>
+<p>The four <code>INTERP_XY</code> instructions, which form another instruction group,
+interpolate both X and Y channels. The X channel is interpolated by the
+instructions in the XY slots, while the Y channel is interpolated by those in
+the ZW slots. In the case of the Y-interpolation, instructions which calculates
+the MAD and DOT operations are in the ZW slot, but the Z-slot passes the result
+to the Y-slot; hence, the write to the Y channel must be in the Y slot, and not
+Z slot (such a write is not even allowed). Details in the Evergreen ISA.</p>
+<pre><code>PC| Offset|  ALU_WORD0| ALU_WORD1_OP2|
+--+-------+-----------+--------------+
+ 2|   0x10| 0x00380400|    0x40346c90|
+
+l| ps|  im| s1n| s1c| s1r|         s1s| s0n| s0c| s0r|         s0s|
+0| 00| 000|   0|  00|   0| 1 1100 0000|   0|  01|   0| 0 0000 0000|
+
+c| dc| dr|  dst_gpr|  bs|          inst| omod| wm|up|uem|s1a|s0a|
+0| 10|  0| 000 0001| 101| 000 1101 1001|   00|  1| 0|  0|  0|  0|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>s0s</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The first source, <code>src0</code> is the <code>R0</code> register. It contains the I/J co-ordinates.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>s0c</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>Select the Y channel of <code>src0</code>. <code>R0.Y</code> contains the J co-ordinate.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>s1s</code></td>
+          <td style="text-align: right"><code>0x1c0</code></td>
+          <td><code>0x1c0</code> represents the location the parameter in the Parameter Cache. Since VS exports a single parameter, it is available at index 0 in the Parameter Cache, or, in absolute terms, at location <code>0x1c0 + 0 = 0x1c0</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>l</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>This isn&rsquo;t the last instruction in the current instruction group. This being a VLIW-5 CPU, the ALU instructions are grouped into one each for each of the XYZWT ALU units. In addition, the group can have 2 64-bit constants embedded in the instruction stream. These 7 slots are the maximum supported; a group can have less. The <code>l</code> bit marks the end of the group.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>wm</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>WRITE_MASK</code>. It would have been better for it to be named <code>WRITE_ENABLE</code>, since it doesn&rsquo;t prevent the write into the destination GPR; on the contrary, it enables the write. Note that this is the <code>DOT</code> half of the interpolation.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>0xd9</code></td>
+          <td><code>OP2_INST_INTERP_Z</code>. This (and the next instruction) interpolate the Z channel.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>bs</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td><code>ALU_VEC_210</code> bank swizzle. This instruction works with two source values. The order in which they must be loaded is fixed for this instruction. The <code>210</code> says that <code>src0</code> (the J coordinate) must be loaded in clock cycle 2, and <code>src1</code> (one of V10, V20, but not the one sent to the MAD half) must be loaded in clock cycle 1.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dst_gpr</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>Write the result into <code>R1</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dc</code></td>
+          <td style="text-align: right"><code>2</code></td>
+          <td>Specifically, write the result into <code>R1.Z</code>.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The MAD half of this 2-instruction group (only ZW) follows.</p>
+<hr>
+<h4 id="ps3-alu1"><strong>PS[3], ALU[1]:</strong></h4>
+<pre><code>PC| Offset|  ALU_WORD0| ALU_WORD1_OP2|
+--+-------+-----------+--------------+
+ 3|   0x18| 0x80380000|    0x60346c80|
+
+l| ps|  im| s1n| s1c| s1r|         s1s| s0n| s0c| s0r|         s0s|
+1| 00| 000|   0|  00|   0| 1 1100 0000|   0|  00|   0| 0 0000 0000|
+
+c| dc| dr|  dst_gpr|  bs|          inst| omod| wm|up|uem|s1a|s0a|
+0| 11|  0| 000 0001| 101| 000 1101 1001|   00|  0| 0|  0|  0|  0|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>s0s</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The first source, <code>src0</code> is the <code>R0</code> register. It contains the I/J co-ordinates.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>s0c</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Select the X channel of <code>src0</code>. <code>R0.X</code> contains the I co-ordinate.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>l</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>This is the last instruction in the current instruction group.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>wm</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Do not write the destination register. However, the result of this instruction is forwarded to the DOT half (the instruction above).</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dc</code></td>
+          <td style="text-align: right"><code>3</code></td>
+          <td>Select the <code>W</code> channel of the destination register. Although the destination register is not written by this instruction, proper setting of <code>dst_gpr</code> and <code>dc</code> is required for correct forwarding of the result. Since this instruction is the MAD half of the <code>INTERP_Z</code> operation, it must set the destination channel to <code>W</code>.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="ps4-alu2"><strong>PS[4], ALU[2]:</strong></h4>
+<p>This instruction begins the XYZW group, which interpolates both X and Y channels.
+The first two of the group interpolate the X channel; the last two, the Y
+channel.</p>
+<pre><code>PC| Offset|  ALU_WORD0| ALU_WORD1_OP2|
+--+-------+-----------+--------------+
+ 4|   0x20| 0x00380400|    0x00346b10|
+
+l| ps|  im| s1n| s1c| s1r|         s1s| s0n| s0c| s0r|         s0s|
+0| 00| 000|   0|  00|   0| 1 1100 0000|   0|  01|   0| 0 0000 0000|
+
+c| dc| dr|  dst_gpr|  bs|          inst| omod| wm|up|uem|s1a|s0a|
+0| 00|  0| 000 0001| 101| 000 1101 0110|   00|  1| 0|  0|  0|  0|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>s0s</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The first source, <code>src0</code> is the <code>R0</code> register. It contains the I/J co-ordinates.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>s0c</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>Select the Y channel of <code>src0</code>. <code>R0.Y</code> contains the J co-ordinate.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>inst</code></td>
+          <td style="text-align: right"><code>0xd6</code></td>
+          <td><code>OP2_INST_INTERP_XY</code>. This (and the next three instructions) interpolate the XY channels. This instruction is the DOT half of the DOT-MAD interpolation instructions.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>wm</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>WRITE_ENABLE</code>. Note that this is the <code>DOT</code> half of the X-interpolation. It must write to the X channel.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dst_gpr</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>R1</code> is the destination register which is, in the end, going to contain the interpolated XYZW values of the PARAMETER.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dc</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Select the <code>X</code> channel of the destination register.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="ps5-alu3"><strong>PS[5], ALU[3]:</strong></h4>
+<p>This instruction begins the XYZW group, which interpolates both X and Y channels.</p>
+<pre><code>PC| Offset|  ALU_WORD0| ALU_WORD1_OP2|
+--+-------+-----------+--------------+
+ 5|   0x28| 0x00380000|    0x20346b10|
+
+l| ps|  im| s1n| s1c| s1r|         s1s| s0n| s0c| s0r|         s0s|
+0| 00| 000|   0|  00|   0| 1 1100 0000|   0|  00|   0| 0 0000 0000|
+
+c| dc| dr|  dst_gpr|  bs|          inst| omod| wm|up|uem|s1a|s0a|
+0| 01|  0| 000 0001| 101| 000 1101 0110|   00|  1| 0|  0|  0|  0|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>s0s</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The first source, <code>src0</code> is the <code>R0</code> register. It contains the I/J co-ordinates.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>s0c</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Select the X channel of <code>src0</code>. <code>R0.X</code> contains the I co-ordinate.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>wm</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>WRITE_ENABLE</code>. Note that this instruct slot performs double-duty. It not only calculates forms the MAD half of the XY interpolation, it also receives the interpolated Y value from the ZW instruction pairs. As a result, we must select dst.<code>Y</code> as writable.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dst_gpr</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>R1</code> is the destination register which is, in the end, going to contain the interpolated XYZW values of the PARAMETER.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dc</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>Select the <code>Y</code> channel of the destination register.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="ps6-alu4"><strong>PS[6], ALU[4]:</strong></h4>
+<p>This instruction begins the XYZW group, which interpolates both X and Y channels.
+The first two of the group interpolate the X channel; the last two, the Y
+channel.</p>
+<pre><code>PC| Offset|  ALU_WORD0| ALU_WORD1_OP2|
+--+-------+-----------+--------------+
+ 6|   0x30| 0x00380400|    0x40346b00|
+
+l| ps|  im| s1n| s1c| s1r|         s1s| s0n| s0c| s0r|         s0s|
+0| 00| 000|   0|  00|   0| 1 1100 0000|   0|  01|   0| 0 0000 0000|
+
+c| dc| dr|  dst_gpr|  bs|          inst| omod| wm|up|uem|s1a|s0a|
+0| 10|  0| 000 0001| 101| 000 1101 0110|   00|  0| 0|  0|  0|  0|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>s0s</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The first source, <code>src0</code> is the <code>R0</code> register. It contains the I/J co-ordinates.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>s0c</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>Select the Y channel of <code>src0</code>. <code>R0.Y</code> contains the J co-ordinate.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>wm</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Do not write the destination register. Note that this is the <code>DOT</code> half of the Y-interpolation; it&rsquo;s output is the final result of the Y-interpolation. But since this instruction itself lies in the Z-slot of the group, it cannot select dst.<code>Y</code> to write; instead the GPU forwards the output of this instruction to the instruction in the Y-slot, which then writes into the Y channel of the destination register. Nevertheless, this instruction must appropriately select the destination and the channel.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dst_gpr</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>R1</code> is the destination register which is, in the end, going to contain the interpolated XYZW values of the PARAMETER.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dc</code></td>
+          <td style="text-align: right"><code>2</code></td>
+          <td>Select the <code>Z</code> channel of the destination register.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h4 id="ps7-alu5"><strong>PS[7], ALU[5]:</strong></h4>
+<p>This instruction begins the XYZW group, which interpolates both X and Y channels.</p>
+<pre><code>PC| Offset|  ALU_WORD0| ALU_WORD1_OP2|
+--+-------+-----------+--------------+
+ 7|   0x38| 0x80380000|    0x60346b00|
+
+l| ps|  im| s1n| s1c| s1r|         s1s| s0n| s0c| s0r|         s0s|
+1| 00| 000|   0|  00|   0| 1 1100 0000|   0|  00|   0| 0 0000 0000|
+
+c| dc| dr|  dst_gpr|  bs|          inst| omod| wm|up|uem|s1a|s0a|
+0| 11|  0| 000 0001| 101| 000 1101 0110|   00|  0| 0|  0|  0|  0|
+</code></pre>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Field</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>s0s</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>The first source, <code>src0</code> is the <code>R0</code> register. It contains the I/J co-ordinates.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>s0c</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Select the X channel of <code>src0</code>. <code>R0.X</code> contains the I co-ordinate.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>wm</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Do not write to the destination register. Since this is the MAD half of the Y-interpolation, it forwards its result to the DOT half, i.e. the instruction in the Z-slot. For proper forwarding, this instruction must still select the correct destination register and channel.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dst_gpr</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td><code>R1</code> is the destination register.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>dc</code></td>
+          <td style="text-align: right"><code>3</code></td>
+          <td>Select the <code>W</code> channel of the destination register.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The entire interpolation of the XYZ coordinates of the COLOR parameter can be
+understood as shown below, with <code>R1.XYZ</code> containing the resultant interpolated
+COLOR channels:</p>
+<pre><code>interp_z	r1.z, r0.y, param0.x	(r1.z = t0 + v20.z * j)
+
+interp_z	__.w, r0.x, param0.x	(t0 = v0.z + v10.z * i)
+
+
+
+interp_xy	r1.x, r0.y, param0.x	(r1.x = t1 + v20.x * j)
+
+interp_xy	r1.y, r0.x, param0.x	(t1 = v0.x + v10.x * i)
+					(r1.y = t2)
+
+interp_xy	__.z, r0.y, param0.x	(t2 = t3 + v20.y * j)
+
+interp_xy	__.w, r0.x, param0.x	(t3 = v0.y + v10.y * i)
+</code></pre>
+<hr>
+<h3 id="command-buffer"><strong>Command Buffer:</strong></h3>
+<p>The Command Buffer consists of some number of words. The commands are
+encapsulated within GFX ring packets of type 3. The manuals have the format and
+the meaning of various fields.</p>
+<p>The command buffer was extracted out of MESA when rendering the same triangle,
+using an OpenGL app. Then, the buffer was modified to suit the modest needs of
+this demo, and to fix the pointers to various resources.</p>
+<p>The buffer is then inserted into the GFX ring for execution as an
+Indirect Buffer.</p>
+<p>It is available, as a binary file, <a href="/wip/data/eg.cmds.0.bin">here</a>.
+Only some of the most obvious commands are shown below.</p>
+<pre><code>. . .
+
+c0016900 SET_CONTEX_REG
+0000023c SQ_VTX_SEMANTIC_CLEAR
+ffffffff -&gt; [SQ_VTX_SEMANTIC_CLEAR]
+	 Clears the FS-VS semantic table entries.
+
+. . .
+
+c0026900 SET_CONTEXT_REG
+00000090 PA_SC_GENERIC_SCISSOR_TL
+00000000 -&gt; [PA_SC_GENERIC_SCISSOR_TL]
+40004000 -&gt; [PA_SC_GENERIC_SCISSOR_BR]
+	 Defines the size of the Generic Scissor, by setting its top-left and
+	 bottom-right corners.
+
+. . .
+
+c0026900 SET_CONTEXT_REG
+0000000c PA_SC_SCREEN_SCISSOR_TL
+00000000 -&gt; [PA_SC_SCREEN_SCISSOR_TL]
+40004000 -&gt; [PA_SC_SCREEN_SCISSOR_BR]
+	 As above, but for the Screen Scissor.
+
+. . .
+
+c00d6900 SET_CONTEXT_REG
+00000318 CB_COLOR0_BASE
+00008000 -&gt; [CB_COLOR0_BASE]. The Color Buffers's gpu_addr &gt;&gt; 8.
+0000009f -&gt; [CB_COLOR0_PITCH].
+	 Width, in units of 8-pixels, minus one. Here, 720/8 - 1.
+0000383f -&gt; [CB_COLOR0_SLICE].
+         The slice here is made up of the entire buffer. The dimensions of the
+	 slice, in the units of 8x8, minus one. Here, 1280 * 720 / 64 - 1.
+00000000
+0108e168 -&gt; [CB_COLOR0_INFO]
+         .format	= COLOR_8_8_8_8;
+	 .array_mode	= ARRAY_LINEAR_ALIGNED;
+	 .number_type	= NUMBER_SRGB;
+	 .comp_swap	= SWAP_ALT;
+			  The frame buffer is in B8R8G8A8, or BGRA8888, or
+			  ARBG32 format. But when pixel color is exported, it
+			  is in the format XYZW=RGBA. Hence, we need to swap
+			  the channels such that XYZW=BGRA.
+	 .src_format	= EXPORT_4C_16BPC; Only one that is suitable.
+	 .blend_clamp	= 1; Must be set for NUMBER_SRGB.
+00000010 -&gt; [CB_COLOR0_ATTRIB]
+00000000 .non_disp_tiling_order = 1;
+	 Must be set since the Color Buffer is in a non-tiled format.
+00000000
+00000000
+00000000
+00000000
+00000000
+00000000
+
+. . .
+
+c0026900 SET_CONTEXT_REG
+00000081 PA_SC_WINDOW_SCISSOR_TL
+00000000 -&gt; [PA_SC_WINDOW_SCISSOR_TL] (0, 0)
+02d00500 -&gt; [PA_SC_WINDOW_SCISSOR_BR] (1280, 720)
+
+. . .
+
+c0086d00 SET_RESOURCE
+00001ff8 Buffer_ID 0x1f, from the FS Resources Base (992).
+	 ((992 + 31) * 32) / 8.
+00004000 LSW(Buffer_Addr)
+00000047 sizeof(Buffer) - 1
+00001800 stride = 6 * 4, LSB(MSW(Buffer_Addr))
+00005440 Channel Selection. XYZ1
+00000000
+00000000
+00000000
+c0000000 Valid Buffer.
+
+. . .
+
+c0026900 SET_CONTEXT_REG
+000000e0 SQ_VTX_SEMANTIC_0
+00000090 -&gt; [SQ_VTX_SEMANTIC_0]. Semantic ID for POSITION.
+00000092 -&gt; [SQ_VTX_SEMANTIC_1]. Semantic ID for COLOR.
+
+. . .
+
+c0016900 SET_CONTEXT_REG
+0000030f PA_SC_AA_MASK
+01010101 -&gt; [PA_SC_AA_MASK].
+	 Even with AA disabled, since the pixels are processed in 2x2 quad, we
+	 must enable Sample0 (the only sample when AA is disabled) for each of
+	 the 4 pixels.
+
+. . .
+
+c0016900 SET_CONTEXT_REG
+00000204 PA_CL_CLIP_CNTL
+00010000 .clip_disable = 1;
+
+. . .
+
+c0066900 SET_CONTEXT_REG
+0000010f PA_CL_VPORT_XCALE_0
+44200000 -&gt; [PA_CL_VPORT_XSCALE_0] = 1280.0 / 2, in float.
+44200000 -&gt; [PA_CL_VPORT_XOFFSET_0]
+c3b40000 -&gt; [PA_CL_VPORT_YSCALE_0] = -720 / 2 (Note the Y-axis being flipped)
+43b40000 -&gt; [PA_CL_VPORT_YOFFSET_0] = 720 / 2
+3f000000 -&gt; [PA_CL_VPORT_ZSCALE_0] = 0.5
+3f000000 -&gt; [PA_CL_VPORT_ZOFFSET_0]
+	 These are utilized when performing the ViewPort Transform.
+
+. . .
+
+c0016900 SET_CONTEXT_REG
+00000229 SQ_PGM_START_FS
+00000054 -&gt; [SQ_PGM_START_FS] = fs_start_gpu_addr &gt;&gt; 8
+
+c0016900 SET_CONTEXT_REG
+00000191 SPI_PS_INPUT_CNTL_0
+00000092 -&gt; [SPI_PS_INPUT_CNTL_0] = Semantic ID for the COLOR parameter.
+
+c0026900 SET_CONTEXT_REG
+000001b3 SPI_PS_IN_CONTROL_0
+10000001 -&gt; [SPI_PS_IN_CONTROL_0]
+	 .num_interp = 1;
+	 .persp_gradient_ena = 1;
+
+. . .
+
+c0016900 SET_CONTEXT_REG
+00000213 SQ_PGM_EXPORTS_PS
+00000002 -&gt; [SQ_PGM_EXPORTS_PS]. PS exports one Color (Buffer?).
+
+c0026900 SET_CONTEXT_REG
+00000210 SQ_PGM_START_PS
+00000058 -&gt; [SQ_PGM_START_PS] = ps_start_gpu_addr &gt;&gt; 8
+00a00002 -&gt; [SQ_PGM_RESOURCE_PS]
+	 .num_gprs = 2; The PS needs 2 GPRs to run.
+
+c00a6900 SET_CONTEXT_REG
+00000187 SPI_VS_OUT_ID_0
+00000092 -&gt; [SPI_VS_OUT_ID_0].
+	 .semantic_0 = Semantic ID for the COLOR export.
+
+. . .
+
+c0016900 SET_CONTEXT_REG
+00000218 SQ_PGM_RESOURCES_VS
+00200103 -&gt; [SQ_PGM_RESOURCES_VS]
+	 .num_gprs = 3; The VS needs 3 GPRs to run.
+	 .stack_size = 1; The VS needs 1 stack entry, for calling the FS.
+
+c0016900 SET_CONTEXT_REG
+00000206 PA_CL_VTE_CNTL
+0000003f -&gt; [PA_CL_VTE_CNTL]. Enable ViewPort Transformation
+
+c0016900 SET_CONTEXT_REG
+00000217 SQ_PGM_START_VS
+00000050 -&gt; [SQ_PGM_START_VS] = vs_start_gpu_addr &gt;&gt; 8
+
+. . .
+
+c0016800 SET_CONFIG_REG
+00000256 VGT_PRIMITIVE_TYPE
+00000004 -&gt; [VGT_PRIMITIVE_TYPE] = DI_PT_TRILIST
+
+c0002f00 NUM_INSTANCE
+00000001
+
+c0012d00 DRAW_INDEX_AUTO
+00000003 # of vertices
+00000002 VGT should generate indices (as no Index Buffer has been setup)
+
+c0016800 SET_CONFIG_REG
+00000010 WAIT_UNTIL
+00008000 -&gt; [WAIT_UNTIL]. Wait for the 3D engine to become idle.
+
+c0034300 SURFACE_SYNC
+02000040 CB0_DEST_BASE_ENA, CB_ACTION_ENA
+00003840 Size of the Color Buffer in units of 256 bytes.
+00008000 cb_gpu_addr &gt;&gt; 8
+0000000a
+</code></pre>
+<hr>
+<h3 id="output"><strong>Output:</strong></h3>
+<p>A screen capture from OBS Studio may result in an image file that has been
+processed by the OBS Studio, and so may not represent the actual frame-buffer
+contents. Instead, QEMU&rsquo;s <code>pmemsave</code> command is used to dump the frame-buffer.
+These raw pixels are then converted to a PNG image with the help of
+ImageMagick: <code>convert -size 1280x720 -depth 8 BGRA:raw.bin eg.0.png</code>.</p>
+<p>The image is available <a href="/wip/images/eg.0.png">here</a>. The vertex buffer that was
+provided to the GPU was:</p>
+<pre><code>static const float verts[] = {
+	/* positions */		/* colors */
+	0.9, -0.9, 0,		1, 0, 0,	/* BR */
+	-0.9, -0.9, 0,		0, 0, 1,	/* BL */
+	0.0,  0.9, 0,		0, 1, 0		/* T */
+};
+</code></pre>
+<hr>
+<h3 id="update-1-a-nameupdate1a"><strong>Update #1:</strong> <a name="update1"></a></h3>
+<p>The vertices given above do not form an equilateral triangle. Moreover, because
+the co-ordinates are in the NDC space, and because the aspect ratio of the
+ViewPort is not square (1280x720 is 16:9), the ViewPort Transformation causes
+the triangle to stretch out in the horizontal dimension with respect to the
+vertical.</p>
+<p>We still want to keep the vertices in the NDC space, but also want to render a
+nice, equilateral triangle. We want to keep the height of the triangle the same,
+i.e. 1.8 units in the NDC space. An equilateral triangle with a height of 1.8
+units has each of its sides measuring <code>2 * 1.8 / tan(pi/3) = 2.07846096908</code>
+units.</p>
+<p>The transformation stretches the horizontal units by a factor of 16/9, with
+respect to the vertical units. Hence, the base of the triangle must be
+<em>compressed</em> by that same factor before performing the transformation.</p>
+<p>That compression gives a base-length of
+<code>2.07846096908 * 9 / 16 = 1.16913429511</code> units.
+Therefore, the X co-ordinates of the bottom-left and bottom-right vertices
+should be changed to <code>-1.16913429511/2 = -0.58456714755</code> and
+<code>1.16913429511/2 = 0.58456714755</code> units, respectively.</p>
+<pre><code>static const float verts[] = {
+	/* positions */		/* colors */
+	0.5846, -0.9, 0,	1, 0, 0,	/* BR */
+	-0.5846, -0.9, 0,	0, 0, 1,	/* BL */
+	0.0,  0.9, 0,		0, 1, 0		/* T */
+};
+</code></pre>
+<p>The resultant image is available <a href="/wip/images/eg.1.png">here</a>.</p>
+<hr>
+<h3 id="update-2-a-nameupdate2a"><strong>Update #2:</strong> <a name="update2"></a></h3>
+<p>Instead of hand-coding the instructions, an
+<a href="https://github.com/asurati/eg.asm">assembler</a> was written to help.
+The FS was made part of the VS, i.e.<code>SQ_PGM_FS_START</code> is made the
+same as <code>SQ_PGM_VS_START</code>, and any FS-specific offsets were made relative to
+the start of the VS.</p>
+<p>Code generated by the assembler for the VS and the FS:</p>
+<pre><code>/*vs_start:*/
+0x00000003, 0x84c00000, /*0: c.fs fs_start b;*/
+0x0000a03c, 0x95000688, /*1: c.xd.pos(1) [60], r1 b;*/
+0x00014000, 0x95200688, /*2: c.xd.prm(1) [0], r2 b, eop;*/
+
+/*fs_start:*/
+0x00000006, 0x80800400, /*3: c.vc(2) cc.a vfc_start b;*/
+0x00000000, 0x85000000, /*4: c.ret b;*/
+0x00000000, 0x00000000, /*5: c.nop;*/
+
+/*vfc_start:*/
+0x00001f01, 0x4c151090, 0x00000000, 0x00000000,
+/*6: v.sem 0x90, flt3, -n, fs[0x1f][0].xyz1, r0;*/
+
+0x00001f01, 0x4c151092, 0x0000000c, 0x00000000,
+/*8: v.sem 0x92, flt3, -n, fs[0x1f][0xc].xyz1, r0;*/
+</code></pre>
+<p>Code generated by the assembler for the PS:</p>
+<pre><code>/*ps_start:*/
+0x00000002, 0xa0140000, /*0: c.alu(6) alu_start b;*/
+0x00008000, 0x95200a88, /*1: c.xd.pix(1) [0], r1.xyz1 b,eop;*/
+
+/*alu_start:*/
+0x00380400, 0x40346c90, /*2: a.iz r1.z, r0.y, p0 210;*/
+0x80380000, 0x60146c80, /*3: a.iz -.w, r0.x, p0 210,last;*/
+0x00380400, 0x00346b10, /*4: a.ixy r1.x, r0.y, p0 210;*/
+0x00380000, 0x20346b10, /*5: a.ixy r1.y, r0.x, p0 210;*/
+0x00380400, 0x40146b00, /*6: a.ixy -.z, r0.y, p0 210;*/
+0x80380000, 0x60146b00, /*7: a.ixy -.w, r0.x, p0 210,last;*/
+</code></pre>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

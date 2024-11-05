@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>HDMI on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/hdmi/</link>
+    <description>Recent content in HDMI on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 15 Oct 2021 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/hdmi/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Driving the HDMI Display Pipeline</title>
+      <link>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/15/driving-the-hdmi-display-pipeline/</guid>
+      <description>&lt;p&gt;The demos have been relying on the firmware to setup the HDMI display pipeline&#xA;and to provide them with a frame buffer to draw on.&lt;/p&gt;&#xA;&lt;p&gt;The program found &lt;a href=&#34;https://github.com/asurati/x03/blob/main/dev/disp.c&#34;&gt;here&lt;/a&gt;&#xA;attempts to take the control of the pipeline from the firmware, and run it&#xA;on its own.&lt;/p&gt;&#xA;&lt;p&gt;Because of the lack of documentation, the Linux &lt;code&gt;vc4&lt;/code&gt; driver was consulted&#xA;to determine the registers to setup and the sequence of steps necessary, to&#xA;disable and enable the pipeline.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Pixel Clock: PLLH_PIX</title>
+      <link>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</link>
+      <pubDate>Thu, 14 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2021/10/14/pixel-clock-pllh_pix/</guid>
+      <description>&lt;p&gt;This post investigates the programming of the HDMI &lt;code&gt;pixel&lt;/code&gt; clock, performed by&#xA;the RPi firmware to push the pixels into the HDMI encoder at that frequency.&lt;/p&gt;&#xA;&lt;p&gt;Booting with the RPi firmware and the U-Boot, the actual resolution of the&#xA;display is 1920x1080@60Hz. The resolution of the frame buffer might be lower -&#xA;the HVS takes care of appropriately scaling and positioning the pixels.&lt;/p&gt;&#xA;&lt;p&gt;Below is the &lt;code&gt;Modeline&lt;/code&gt; details about the 1920x1080@60Hz resolution. These&#xA;details were extracted out of the &lt;a href=&#34;https://en.wikipedia.org/wiki/Extended_Display_Identification_Data&#34;&gt;EDID&lt;/a&gt; information gathered from the monitor:&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

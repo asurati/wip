@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>cc: Generalized LR Parsing | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">cc: Generalized LR Parsing</span></h1>
+
+<h2 class="date">2023/08/26</h2>
+</div>
+
+<main>
+<p><em><a href="#update1">Update #1</a> on: 28th August, 2023.</em></p>
+<p><em><a href="#update2">Update #2</a> on: 13th September, 2023.</em></p>
+<hr>
+<p>This post demonstrates the <a href="https://en.wikipedia.org/wiki/GLR_parser">GLR</a>
+parsing of a tiny C program, with the reader assuming the role of an
+<a href="https://en.wikipedia.org/wiki/Canonical_LR_parser">LR(1)</a>
+automaton/finite-state-machine.</p>
+<p>The grammar constructs utilized here are adopted from the informal grammar
+description in the C2x standard, augmented with a production</p>
+<p><code>TranslationObject -&gt; TranslationUnit</code>,</p>
+<p>where <code>TranslationObject</code> is a
+non-terminal that does not occur on the RHS of any production.</p>
+<p>The look-aheads (<code>las</code>) of an item are either not shown, or shown only
+in brevity, as most items contain several tens of look-aheads.</p>
+<p>A program
+(Source file <code>lr.c</code> within the <a href="https://github.com/asurati/x24">x24</a> project)
+generates the
+<a href="/wip/data/lr1.item.sets.txt.gz">collection of canonical-LR(1)-item-sets</a>,
+each of which is referred to here with its index. Each item-set also represents
+the corresponding state in the finite-state-machine.</p>
+<p>For convenience, the <code>lr.c</code> program treats certain non-terminals, such as
+<code>Identifier</code>, <code>StringLiteral</code>, and <code>IntegerConstant</code> as terminals.</p>
+<hr>
+<p>The sample program:</p>
+<pre><code class="language-c">int main()
+{
+    return 0;
+}
+</code></pre>
+<hr>
+<h3 id="step-0">Step #0:</h3>
+<p>The stack initially contains the item-set #0.</p>
+<pre><code>    #0
+    -------------------------------------------------- bottom of the stack
+</code></pre>
+<p>The machine is in the state #0, with no current token. The machine fetches the
+next available token in the input-stream, the key-word <code>int</code>, as the
+current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>   int
+</code></pre>
+<p>The choice of items in the item-set-#0 is the shift-item</p>
+<p><code>[TypeSpecifier -&gt; . int] jump=3998</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3998
+    int
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-ahead for the
+machine, is the identifier <code>main</code>, known within the grammar as the token
+<code>Identifier</code>.</p>
+<p>The choice of items in the item-set-#3998 is the reduce-item</p>
+<p><code>[TypeSpecifier -&gt; int .] las: ... Identifier ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>TypeSpecifier</code>, with the
+stack as shown below:</p>
+<pre><code>    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>     TypeSpecifier
+     |
+     v
+     int
+</code></pre>
+<hr>
+<h3 id="step-1">Step #1:</h3>
+<p>The machine is in the state #0, with <code>TypeSpecifier</code> as the current token.</p>
+<p>The choice of items in the item-set-#0 is the shift-item</p>
+<p><code>[TypeSpecifierQualifier -&gt; . TypeSpecifier] jump=3990</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3990
+    TypeSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is still the identifier <code>main</code>.</p>
+<p>The choice of items in the item-set-#3990 is the reduce-item</p>
+<p><code>[TypeSpecifierQualifier -&gt; TypeSpecifier .] las: ... Identifier ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>TypeSpecifierQualifier</code>, with the
+stack as shown below:</p>
+<pre><code>    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier
+    |
+    v
+    int
+</code></pre>
+<hr>
+<h3 id="step-2">Step #2:</h3>
+<p>The machine is in the state #0, with <code>TypeSpecifierQualifier</code>
+as the current token.</p>
+<p>The choice of items in the item-set-#0 is the shift-item</p>
+<p><code>[DeclarationSpecifier -&gt; . TypeSpecifierQualifier] jump=3981</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3981
+    TypeSpecifierQualifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is still the identifier <code>main</code>.</p>
+<p>The choice of items in the item-set-#3981 is the reduce-item</p>
+<p><code>[DeclarationSpecifier -&gt; TypeSpecifierQualifier .] las: ... Identifier ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>DeclarationSpecifier</code>, with the
+stack as shown below:</p>
+<pre><code>    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier
+    |
+    v
+    int
+</code></pre>
+<hr>
+<h3 id="step-3">Step #3:</h3>
+<p>The machine is in the state #0, with <code>DeclarationSpecifier</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#0 are the shift-items</p>
+<pre><code>[DeclarationSpecifiers -&gt; . DeclarationSpecifier] jump=3968
+[DeclarationSpecifiers -&gt; . DeclarationSpecifier AttributeSpecifierSequence] jump=3968
+[DeclarationSpecifiers -&gt; . DeclarationSpecifier DeclarationSpecifiers] jump=3968
+</code></pre>
+<p>Since they are concerned with shifting the same token, they all must
+(and indeed they do) go to the same state.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is still the identifier <code>main</code>.</p>
+<p>The choice of items in the item-set-#3968 are these items, one of which is a
+shift-item and the other is a reduce-item.</p>
+<pre><code>[DeclarationSpecifiers -&gt; DeclarationSpecifier .] las: ... Identifier ...
+[TypedefName -&gt; . Identifier] jump=4221
+</code></pre>
+<p>The machine encounters a shift/reduce conflict. It forks the stack, and copies
+the input pointer (or the input itself.)</p>
+<p>The processing of the shift-item is described in the steps #3.x below, while
+that of the reduce-item is described in the steps #4 and beyond, below.</p>
+<hr>
+<h3 id="step-31">Step #3.1:</h3>
+<p>The machine is in the state #3968, with no current token. The machine fetches
+the next available token in the input-stream, the identifier <code>main</code>,
+as the current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier
+    |
+    v
+    int                     main
+</code></pre>
+<p>After the shift, the stack is</p>
+<pre><code>    #4221
+    Identifier(main)
+    --------------------------------------------------
+    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is the punctuator <code>(</code>.</p>
+<p>The choice of items in the item-set-#4221 is the reduce-item</p>
+<p><code>[TypedefName -&gt; Identifier .] las: ... ( ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>TypedefName</code>, with the
+stack as shown below:</p>
+<pre><code>    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier           TypedefName
+    |                       |
+    v                       v
+    int                     main
+</code></pre>
+<hr>
+<h3 id="step-32">Step #3.2:</h3>
+<p>The machine is in the state #3968, with <code>TypedefName</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#3968 is the shift-item</p>
+<p><code>[TypeSpecifier -&gt; . TypedefName] jump=4016</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #4016
+    TypedefName
+    --------------------------------------------------
+    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is still the punctuator <code>(</code>.</p>
+<p>The choice of items in the item-set-#4016 is the reduce-item</p>
+<p><code>[TypeSpecifier -&gt; TypedefName .] las: ... ( ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>TypeSpecifier</code>, with the
+stack as shown below:</p>
+<pre><code>    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier  TypeSpecifier
+    |                       |
+    v                       v
+    TypeSpecifier           TypedefName
+    |                       |
+    v                       v
+    int                     main
+</code></pre>
+<hr>
+<h3 id="step-33">Step #3.3:</h3>
+<p>The machine is in the state #3968, with <code>TypeSpecifier</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#3968 is the shift-item</p>
+<p><code>[TypeSpecifierQualifier -&gt; . TypeSpecifier] jump=3990</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3990
+    TypeSpecifier
+    --------------------------------------------------
+    #3978
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is still the punctuator <code>(</code>.</p>
+<p>The choice of items in the item-set-#3990 is the reduce-item</p>
+<p><code>[TypeSpecifierQualifier -&gt; TypeSpecifier .] las: ... ( ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>TypeSpecifierQualifier</code>, with the
+stack as shown below:</p>
+<pre><code>    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifier    TypeSpecifierQualifier
+    |                       |
+    v                       v
+    TypeSpecifierQualifier  TypeSpecifier
+    |                       |
+    v                       v
+    TypeSpecifier           TypedefName
+    |                       |
+    v                       v
+    int                     main
+</code></pre>
+<hr>
+<h3 id="step-34">Step #3.4:</h3>
+<p>The machine is in the state #3968, with <code>TypeSpecifierQualifier</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#3968 is the shift-item</p>
+<p><code>[DeclarationSpecifier -&gt; . TypeSpecifierQualifier] jump=3981</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3981
+    TypeSpecifierQualifier
+    --------------------------------------------------
+    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+still the punctuator <code>(</code>.</p>
+<p>The choice of items in the item-set-#3981 is the reduce-item</p>
+<p><code>[DeclarationSpecifier -&gt; TypeSpecifierQualifier .] las: ... ( ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>DeclarationSpecifier</code>, with the
+stack as shown below:</p>
+<pre><code>    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>                            DeclarationSpecifier
+                            |
+                            v
+    DeclarationSpecifier    TypeSpecifierQualifier
+    |                       |
+    v                       v
+    TypeSpecifierQualifier  TypeSpecifier
+    |                       |
+    v                       v
+    TypeSpecifier           TypedefName
+    |                       |
+    v                       v
+    int                     main
+</code></pre>
+<hr>
+<h3 id="step-35">Step #3.5:</h3>
+<p>The machine is in the state #3968, with <code>DeclarationSpecifier</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#3732 are the shift-items</p>
+<pre><code>[DeclarationSpecifiers -&gt; . DeclarationSpecifier] jump=3968
+[DeclarationSpecifiers -&gt; . DeclarationSpecifier AttributeSpecifierSequence] jump=3968
+[DeclarationSpecifiers -&gt; . DeclarationSpecifier DeclarationSpecifiers] jump=3968
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+still the punctuator <code>(</code>.</p>
+<p>The choice of items in the item-set-#3968 is the reduce-item</p>
+<p><code>[DeclarationSpecifiers -&gt; DeclarationSpecifier .] las: ... ( ...</code>.</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>DeclarationSpecifiers</code>, with the
+stack as shown below:</p>
+<pre><code>    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>                            DeclarationSpecifiers
+                            |
+                            v
+                            DeclarationSpecifier
+                            |
+                            v
+    DeclarationSpecifier    TypeSpecifierQualifier
+    |                       |
+    v                       v
+    TypeSpecifierQualifier  TypeSpecifier
+    |                       |
+    v                       v
+    TypeSpecifier           TypedefName
+    |                       |
+    v                       v
+    int                     main
+</code></pre>
+<hr>
+<h3 id="step-36">Step #3.6:</h3>
+<p>The machine is in the state #3968, with <code>DeclarationSpecifiers</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#3968 is the shift-item</p>
+<p><code>[DeclarationSpecifiers -&gt; DeclarationSpecifier . DeclarationSpecifiers] jump=3978</code></p>
+<p>(Notice the right-associativity of <code>DeclarationSpecifiers</code>.)</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3978
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #3968
+    DeclarationSpecifier
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+still the punctuator <code>(</code>.</p>
+<p>The choice of items in the item-set-#3978 is the reduce-item</p>
+<p><code>[DeclarationSpecifiers -&gt; DeclarationSpecifier DeclarationSpecifiers .] las: ... ( ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>DeclarationSpecifiers</code>, with the
+stack as shown below:</p>
+<pre><code>    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifiers (note the right-associativity)
+    |
+    +-----------------------+
+    |                       |
+    |                       v
+    |                       DeclarationSpecifiers
+    |                       |
+    |                       v
+    |                       DeclarationSpecifier
+    |                       |
+    v                       v
+    DeclarationSpecifier    TypeSpecifierQualifier
+    |                       |
+    v                       v
+    TypeSpecifierQualifier  TypeSpecifier
+    |                       |
+    v                       v
+    TypeSpecifier           TypedefName
+    |                       |
+    v                       v
+    int                     main
+</code></pre>
+<hr>
+<h3 id="step-37">Step #3.7:</h3>
+<p>The machine is in the state #0, with <code>DeclarationSpecifiers</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#0 is the set of these shift-items</p>
+<pre><code>[FunctionDefinition -&gt; . DeclarationSpecifiers Declarator FunctionBody] jump=5
+[Declaration -&gt; . DeclarationSpecifiers ;] jump=5
+[Declaration -&gt; . DeclarationSpecifiers InitDeclaratorList ;] jump=5
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is still the punctuator <code>(</code>.</p>
+<p>There is no suitable reduce-item in the item-set-#5.
+Hence, the machine attempts a shift.</p>
+<hr>
+<h3 id="step-38">Step #3.8:</h3>
+<p>The machine is in the state #5, with no current token. The machine fetches the
+next available token in the input-stream, <code>(</code>, as the current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>    DeclarationSpecifiers (note the right-associativity)
+    |
+    +-----------------------+
+    |                       |
+    |                       v
+    |                       DeclarationSpecifiers
+    |                       |
+    |                       v
+    |                       DeclarationSpecifier
+    |                       |
+    v                       v
+    DeclarationSpecifier    TypeSpecifierQualifier
+    |                       |
+    v                       v
+    TypeSpecifierQualifier  TypeSpecifier
+    |                       |
+    v                       v
+    TypeSpecifier           TypedefName
+    |                       |
+    v                       v
+    int                     main                    (
+</code></pre>
+<p>The choice of items in the item-set-#5 is the shift-item</p>
+<p><code>[DirectDeclarator -&gt; . ( Declarator )] jump=4747</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #4747
+    (
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+now the punctuator <code>)</code>.</p>
+<p>There is no suitable reduce-item in the item-set-#4747.
+Nor is there a shift-item that can shift the token <code>)</code>. The machine cannot move
+any more.</p>
+<p>This causes the termination of the #3.x fork of the step-#3 stack.</p>
+<hr>
+<h3 id="step-4">Step #4:</h3>
+<p>(continuing from the end of Step #3, but jumping here instead of going through
+steps #3.x)</p>
+<p>After the reduction, the current token is <code>DeclarationSpecifiers</code>, with the
+stack as shown below:</p>
+<pre><code>    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifiers
+    |
+    v
+    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier
+    |
+    v
+    int
+</code></pre>
+<hr>
+<h3 id="step-5">Step #5:</h3>
+<p>The machine is in the state #0, with <code>DeclarationSpecifiers</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#0 is the set of these shift-items</p>
+<pre><code>[FunctionDefinition -&gt; . DeclarationSpecifiers Declarator FunctionBody] jump=5
+[Declaration -&gt; . DeclarationSpecifiers ;] jump=5
+[Declaration -&gt; . DeclarationSpecifiers InitDeclaratorList ;] jump=5
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+still the identifier <code>main</code>. (Note that input consumed by fork #3.x has no
+effect on the input-stream of the current fork.)</p>
+<p>There is no suitable reduce-item in the item-set-#5.
+Hence, the machine attempts a shift.</p>
+<hr>
+<h3 id="step-6">Step #6:</h3>
+<p>The machine is in the state #5, with no current token. The machine fetches the
+next available token in the input-stream, the identifier <code>main</code>,
+as the current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>    DeclarationSpecifiers
+    |
+    v
+    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier
+    |
+    v
+    int                     main
+</code></pre>
+<p>The choice of items in the item-set-#5 is the set of these shift-items</p>
+<pre><code>[DirectDeclarator -&gt; . Identifier] jump=4736
+[DirectDeclarator -&gt; . Identifier AttributeSpecifierSequence]c$ jump=4736
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #4736
+    Identifier(main)
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+now the punctuator <code>(</code>.</p>
+<p>The choice of items in the item-set-#4736 is the reduce-item</p>
+<p><code>[DirectDeclarator -&gt; Identifier .] las: ... ( ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>DirectDeclarator</code>, with the
+stack as shown below:</p>
+<pre><code>    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifiers
+    |
+    v
+    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier           DirectDeclarator
+    |                       |
+    v                       v
+    int                     main
+</code></pre>
+<hr>
+<h3 id="step-7">Step #7:</h3>
+<p>The machine is in the state #5, with <code>DirectDeclarator</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#5 is the set of these shift-items</p>
+<pre><code>[Declarator -&gt; . DirectDeclarator] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ TypeQualifierList ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ TypeQualifierList AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ static AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ static TypeQualifierList AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ TypeQualifierList static AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ * ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ TypeQualifierList * ]] jump=4708
+[FunctionDeclarator -&gt; . DirectDeclarator ( )] jump=4708
+[FunctionDeclarator -&gt; . DirectDeclarator ( ParameterTypeList )] jump=4708
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #4708
+    DirectDeclarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+still the punctuator <code>(</code>.</p>
+<p>There are no suitable reduce-items in the item-set-#4708.
+Hence, the machine attempts a shift.</p>
+<hr>
+<h3 id="step-8">Step #8:</h3>
+<p>The machine is in the state #4708, with no current token. The machine fetches
+the next available token in the input-stream, <code>(</code>, as the current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>    DeclarationSpecifiers
+    |
+    v
+    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier           DirectDeclarator
+    |                       |
+    v                       v
+    int                     main              (
+</code></pre>
+<p>The choice of items in the item-set-#4708 is the set of these shift-items</p>
+<pre><code>[FunctionDeclarator -&gt; DirectDeclarator . ( )] jump=4730
+[FunctionDeclarator -&gt; DirectDeclarator . ( ParameterTypeList )] jump=4730
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #4730
+    (
+    --------------------------------------------------
+    #4708
+    DirectDeclarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+now the punctuator <code>)</code>.</p>
+<p>There is no suitable reduce-item in the item-set-#4730.
+Hence, the machine attempts a shift.</p>
+<hr>
+<h3 id="step-9">Step #9:</h3>
+<p>The machine is in the state #4730, with no current token. The machine fetches
+the next available token in the input-stream, the punctuator <code>)</code>.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>    DeclarationSpecifiers
+    |
+    v
+    DeclarationSpecifier
+    |
+    v
+    TypeSpecifierQualifier
+    |
+    v
+    TypeSpecifier           DirectDeclarator
+    |                       |
+    v                       v
+    int                     main              (  )
+</code></pre>
+<p>The choice of item in the item-set-#4730 is the shift-item</p>
+<p><code>[FunctionDeclarator -&gt; DirectDeclarator ( . )] jump=4731</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #4731
+    )
+    --------------------------------------------------
+    #4730
+    (
+    --------------------------------------------------
+    #4708
+    DirectDeclarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+now the punctuator <code>{</code>.</p>
+<p>The choice of items in the item-set-#4731 is the reduce-item</p>
+<p><code>[FunctionDeclarator -&gt; DirectDeclarator ( ) .] las: ... { ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>FunctionDeclarator</code>, with the
+stack as shown below:</p>
+<pre><code>    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifiers
+    |
+    v
+    DeclarationSpecifier
+    |
+    v                       FunctionDeclarator
+    TypeSpecifierQualifier  |
+    |                       +-----------------+--+
+    |                       |                 |  |
+    v                       v                 |  |
+    TypeSpecifier           DirectDeclarator  |  |
+    |                       |                 |  |
+    v                       v                 v  v
+    int                     main              (  )
+</code></pre>
+<hr>
+<h3 id="step-10">Step #10:</h3>
+<p>The machine is in the state #5, with <code>FunctionDeclarator</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#5 is the set of these shift-items</p>
+<pre><code>[DirectDeclarator -&gt; . FunctionDeclarator] jump=4752
+[DirectDeclarator -&gt; . FunctionDeclarator AttributeSpecifierSequence] jump=4752
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #4752
+    FunctionDeclarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+still the punctuator <code>{</code>.</p>
+<p>The choice of items in the item-set-#4752 is the reduce-item</p>
+<p><code>[DirectDeclarator -&gt; FunctionDeclarator .] las: ... { ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>DirectDeclarator</code>, with the
+stack as shown below:</p>
+<pre><code>    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>    DeclarationSpecifiers
+    |
+    v                       DirectDeclarator
+    DeclarationSpecifier    |
+    |                       v
+    v                       FunctionDeclarator
+    TypeSpecifierQualifier  |
+    |                       +-----------------+--+
+    |                       |                 |  |
+    v                       v                 |  |
+    TypeSpecifier           DirectDeclarator  |  |
+    |                       |                 |  |
+    v                       v                 v  v
+    int                     main              (  )
+</code></pre>
+<hr>
+<h3 id="step-11">Step #11:</h3>
+<p>The machine is in the state #5, with <code>DirectDeclarator</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#5 is the set of these shift-items</p>
+<pre><code>[Declarator -&gt; . DirectDeclarator] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ TypeQualifierList ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ TypeQualifierList AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ static AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ static TypeQualifierList AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ TypeQualifierList static AssignmentExpression ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ * ]] jump=4708
+[ArrayDeclarator -&gt; . DirectDeclarator [ TypeQualifierList * ]] jump=4708
+[FunctionDeclarator -&gt; . DirectDeclarator ( )] jump=4708
+[FunctionDeclarator -&gt; . DirectDeclarator ( ParameterTypeList )] jump=4708
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #4708
+    DirectDeclarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+still the punctuator <code>{</code>.</p>
+<p>The choice of items in the item-set-#4708 is the reduce-item</p>
+<p><code>[Declarator -&gt; DirectDeclarator .] las: ... { ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>Declarator</code>, with the
+stack as shown below:</p>
+<pre><code>    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>                            Declarator
+    DeclarationSpecifiers   |
+    |                       v
+    v                       DirectDeclarator
+    DeclarationSpecifier    |
+    |                       v
+    v                       FunctionDeclarator
+    TypeSpecifierQualifier  |
+    |                       +-----------------+--+
+    |                       |                 |  |
+    v                       v                 |  |
+    TypeSpecifier           DirectDeclarator  |  |
+    |                       |                 |  |
+    v                       v                 v  v
+    int                     main              (  )
+</code></pre>
+<hr>
+<h3 id="step-12">Step #12:</h3>
+<p>The machine is in the state #5, with <code>Declarator</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#5 is the set of these shift-items</p>
+<pre><code>[FunctionDefinition -&gt; DeclarationSpecifiers . Declarator FunctionBody] jump=6
+[InitDeclarator -&gt; . Declarator] jump=6
+[InitDeclarator -&gt; . Declarator = Initializer] jump=6
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+still the punctuator <code>{</code>.</p>
+<p>There is no suitable reduce-item in the item-set-#6.
+Hence, the machine attempts a shift.</p>
+<hr>
+<h3 id="step-13">Step #13:</h3>
+<p>The machine is in the state #6, with no current token. The machine fetches the
+next available token in the input-stream, <code>{</code>, as the current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>                            Declarator
+    DeclarationSpecifiers   |
+    |                       v
+    v                       DirectDeclarator
+    DeclarationSpecifier    |
+    |                       v
+    v                       FunctionDeclarator
+    TypeSpecifierQualifier  |
+    |                       +-----------------+--+
+    |                       |                 |  |
+    v                       v                 |  |
+    TypeSpecifier           DirectDeclarator  |  |
+    |                       |                 |  |
+    v                       v                 v  v
+    int                     main              (  )  {
+</code></pre>
+<p>The choice of items in the item-set-#6 is the set of these shift-items</p>
+<pre><code>[CompoundStatement -&gt; . { }] jump=3459
+[CompoundStatement -&gt; . { BlockItemList }] jump=3459
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+now the key-word <code>return</code>.</p>
+<p>There is no suitable reduce-item in the item-set-#3459.
+Hence, the machine attempts a shift.</p>
+<hr>
+<h3 id="step-14">Step #14:</h3>
+<p>The machine is in the state #3459, with no current token. The machine fetches
+the next available token in the input-stream, the key-word <code>return</code>, as the
+current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>                            Declarator
+    DeclarationSpecifiers   |
+    |                       v
+    v                       DirectDeclarator
+    DeclarationSpecifier    |
+    |                       v
+    v                       FunctionDeclarator
+    TypeSpecifierQualifier  |
+    |                       +-----------------+--+
+    |                       |                 |  |
+    v                       v                 |  |
+    TypeSpecifier           DirectDeclarator  |  |
+    |                       |                 |  |
+    v                       v                 v  v
+    int                     main              (  )  {  return
+</code></pre>
+<p>The choice of items in the item-set-#3459 is the set of these shift-items</p>
+<pre><code>[JumpStatement -&gt; . return ;] jump=3940
+[JumpStatement -&gt; . return Expression ;] jump=3940
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3940
+    return
+    --------------------------------------------------
+    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+now <code>0</code>, known to the grammar as an <code>IntegerConstant</code>.</p>
+<p>There is no suitable reduce-item in the item-set-#3940.
+Hence, the machine attempts a shift.</p>
+<hr>
+<h3 id="step-15">Step #15:</h3>
+<p>The machine is in the state #3940, with no current token. The machine fetches
+the next available token in the input-stream, <code>0</code> (or, <code>IntegerConstant</code>), as
+the current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>                            Declarator
+    DeclarationSpecifiers   |
+    |                       v
+    v                       DirectDeclarator
+    DeclarationSpecifier    |
+    |                       v
+    v                       FunctionDeclarator
+    TypeSpecifierQualifier  |
+    |                       +-----------------+--+
+    |                       |                 |  |
+    v                       v                 |  |
+    TypeSpecifier           DirectDeclarator  |  |
+    |                       |                 |  |
+    v                       v                 v  v
+    int                     main              (  )  {  return  0
+</code></pre>
+<p>The choice of items in the item-set-#3940 is the shift-item</p>
+<p><code>[PrimaryExpression -&gt; . IntegerConstant] jump=3423</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3423
+    IntegerConstant(0)
+    --------------------------------------------------
+    #3940
+    return
+    --------------------------------------------------
+    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next token in the input, and also the current look-head for the machine, is
+now the punctuator <code>;</code>.</p>
+<p>The choice of items in the item-set-#3423 is the reduce-item</p>
+<p><code>[PrimaryExpression -&gt; IntegerConstant .] las: ... ; ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>PrimaryExpression</code>, with the
+stack as shown below:</p>
+<pre><code>    #3940
+    return
+    --------------------------------------------------
+    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>                            Declarator
+    DeclarationSpecifiers   |
+    |                       v
+    v                       DirectDeclarator
+    DeclarationSpecifier    |
+    |                       v
+    v                       FunctionDeclarator
+    TypeSpecifierQualifier  |
+    |                       +-----------------+--+
+    |                       |                 |  |
+    v                       v                 |  |
+    TypeSpecifier           DirectDeclarator  |  |             PrimaryExpression
+    |                       |                 |  |             |
+    v                       v                 v  v             v
+    int                     main              (  )  {  return  0
+</code></pre>
+<hr>
+<h3 id="step-16">Step #16:</h3>
+<p>The machine is in the state #3940, with <code>PrimaryExpression</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#3940 is the shift-item</p>
+<p><code>[PostfixExpression -&gt; . PrimaryExpression] jump=3420</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3420
+    PrimaryExpression
+    --------------------------------------------------
+    #3940
+    return
+    --------------------------------------------------
+    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is still the punctuator <code>;</code>.</p>
+<p>The choice of items in the item-set-#3420 is the reduce-item</p>
+<p><code>[PostfixExpression -&gt; PrimaryExpression .] las: ... ; ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>PostfixExpression</code>, with the
+stack as shown below:</p>
+<pre><code>    #3940
+    return
+    --------------------------------------------------
+    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>                            Declarator
+    DeclarationSpecifiers   |
+    |                       v
+    v                       DirectDeclarator
+    DeclarationSpecifier    |
+    |                       v
+    v                       FunctionDeclarator
+    TypeSpecifierQualifier  |
+    |                       +-----------------+--+             PostfixExpression
+    |                       |                 |  |             |
+    v                       v                 |  |             v
+    TypeSpecifier           DirectDeclarator  |  |             PrimaryExpression
+    |                       |                 |  |             |
+    v                       v                 v  v             v
+    int                     main              (  )  {  return  0
+</code></pre>
+<hr>
+<h3 id="step-17">Step #17:</h3>
+<p>After some number of similar steps, the machine arrives at the state described
+below, with <code>Expression</code> as the current token. The next available token in the
+input, and also the current look-head for the machine, is still the punctuator
+<code>;</code>.</p>
+<p>The stack is:</p>
+<pre><code>    #3940
+    return
+    --------------------------------------------------
+    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>             Expression
+             |
+             v
+             AssignmentExpression
+             |
+             v
+             ConditionalExpression
+             |
+             v
+             LogicalOrExpression
+             |
+             v
+             LogicalAndExpression
+             |
+             v
+             InclusiveOrExpression
+             |
+             v
+             ExclusiveOrExpression
+             |
+             v
+             AndExpression
+             |
+             v
+             EqualityExpression
+             |
+             v
+             RelationalExpression
+             |
+             v
+             ShiftExpression
+             |
+             v
+             AdditiveExpression
+             |
+             v
+             MultiplicativeExpression
+             |
+             v
+             CastExpression
+             |
+             v
+             UnaryExpression
+             |
+             v
+             PostfixExpression
+             |
+             v
+             PrimaryExpression
+             |
+             +-------------------------------------------------+
+                                                               |
+                            Declarator                         |
+    DeclarationSpecifiers   |                                  |
+    |                       v                                  |
+    v                       DirectDeclarator                   |
+    DeclarationSpecifier    |                                  |
+    |                       v                                  |
+    v                       FunctionDeclarator                 |
+    TypeSpecifierQualifier  |                                  |
+    |                       +-----------------+--+             |
+    |                       |                 |  |             |
+    v                       v                 |  |             |
+    TypeSpecifier           DirectDeclarator  |  |             |
+    |                       |                 |  |             |
+    v                       v                 v  v             v
+    int                     main              (  )  {  return  0
+</code></pre>
+<hr>
+<h3 id="step-18">Step #18:</h3>
+<p>The machine is in the state #3940, with <code>Expression</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#3940 is the set of these shift-items</p>
+<pre><code>[JumpStatement -&gt; return . Expression ;] jump=3942
+[Expression -&gt; . Expression , AssignmentExpression] jump=3942
+</code></pre>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3942
+    Expression
+    --------------------------------------------------
+    #3940
+    return
+    --------------------------------------------------
+    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is still the punctuator <code>;</code>.</p>
+<p>There is no suitable reduce-item in the item-set-#3942.
+Hence, the machine attempts a shift.</p>
+<hr>
+<h3 id="step-19">Step #19:</h3>
+<p>The machine is in the state #3942, with no current token. The machine fetches
+the next available token in the input-stream, the punctuator <code>;</code>, as the
+current token.</p>
+<p>After the fetch, the parse forest is:</p>
+<pre><code>             Expression
+             |
+             v
+             .
+             .
+             .
+             |
+             v
+             PrimaryExpression
+             |
+             +-------------------------------------------------+
+                                                               |
+                            Declarator                         |
+    DeclarationSpecifiers   |                                  |
+    |                       v                                  |
+    v                       DirectDeclarator                   |
+    DeclarationSpecifier    |                                  |
+    |                       v                                  |
+    v                       FunctionDeclarator                 |
+    TypeSpecifierQualifier  |                                  |
+    |                       +-----------------+--+             |
+    |                       |                 |  |             |
+    v                       v                 |  |             |
+    TypeSpecifier           DirectDeclarator  |  |             |
+    |                       |                 |  |             |
+    v                       v                 v  v             v
+    int                     main              (  )  {  return  0  ;
+</code></pre>
+<p>The choice of items in the item-set-#3942 is the shift-item</p>
+<p><code>[JumpStatement -&gt; return Expression . ;] jump=3943</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3943
+    ;
+    --------------------------------------------------
+    #3942
+    Expression
+    --------------------------------------------------
+    #3940
+    return
+    --------------------------------------------------
+    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The next available token in the input, and also the current look-head for the
+machine, is now the punctuator <code>}</code>.</p>
+<p>The choice of items in the item-set-#3943 is the reduce-item</p>
+<p><code>[JumpStatement -&gt; return Expression ; .] las: ... } ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>JumpStatement</code>, with the
+stack as shown below:</p>
+<pre><code>    #3459
+    {
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>          JumpStatement
+          |
+          +--+------------------+
+          |  |                  |
+          |  v                  |
+          |  Expression         |
+          |  |                  |
+          |  v                  |
+          |  .                  |
+          |  .                  |
+          |  .                  |
+          |  |                  |
+          |  v                  |
+          |  PrimaryExpression  |
+          |  |                  +---------------------------------+
+          |  +-------------------------------------------------+  |
+          +--------------------------------------------+       |  |
+                                                       |       |  |
+                            Declarator                 |       |  |
+    DeclarationSpecifiers   |                          |       |  |
+    |                       v                          |       |  |
+    v                       DirectDeclarator           |       |  |
+    DeclarationSpecifier    |                          |       |  |
+    |                       v                          |       |  |
+    v                       FunctionDeclarator         |       |  |
+    TypeSpecifierQualifier  |                          |       |  |
+    |                       +-----------------+--+     |       |  |
+    |                       |                 |  |     |       |  |
+    v                       v                 |  |     |       |  |
+    TypeSpecifier           DirectDeclarator  |  |     |       |  |
+    |                       |                 |  |     |       |  |
+    v                       v                 v  v     v       v  v
+    int                     main              (  )  {  return  0  ;
+</code></pre>
+<hr>
+<h3 id="step-20">Step #20:</h3>
+<p>After consuming the last input token <code>}</code>, the machine arrives at the state
+described below, with <code>CompoundStatement</code> as the current token.
+The input has been exhausted; hence the look-ahead for this and the subsequent
+steps is always <code>$</code>, or <code>eof</code>.</p>
+<p>The stack is:</p>
+<pre><code>    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>       CompoundStatement
+       |
+       +--+-------------------------------+
+       |  |                               |
+       |  v                               |
+       |  BlockItemList                   |
+       |  |                               |
+       |  v                               |
+       |  BlockItem                       |
+       |  |                               |
+       |  v                               |
+       |  UnlabeledStatement              |
+       |  |                               |
+       |  v                               |
+       |  JumpStatement                   |
+       |  |                               |
+       |  +--+-------------------------+  |
+       |  |  |                         |  |
+       |  |  v                         |  |
+       |  |  Expression                |  |
+       |  |  |                         |  |
+       |  |  v                         |  |
+       |  |  .                         |  |
+       |  |  .                         |  |
+       |  |  .                         |  |
+       |  |  |                         |  |
+       |  |  v                         |  |
+       |  |  PrimaryExpression         |  +--------------------------+
+       |  |  |                         +--------------------------+  |
+       |  |  +-------------------------------------------------+  |  |
+       |  +--------------------------------------------+       |  |  |
+       +--------------------------------------------+  |       |  |  |
+                                                    |  |       |  |  |
+                                                    |  |       |  |  |
+                                                    |  |       |  |  |
+                            Declarator              |  |       |  |  |
+    DeclarationSpecifiers   |                       |  |       |  |  |
+    |                       v                       |  |       |  |  |
+    v                       DirectDeclarator        |  |       |  |  |
+    DeclarationSpecifier    |                       |  |       |  |  |
+    |                       v                       |  |       |  |  |
+    v                       FunctionDeclarator      |  |       |  |  |
+    TypeSpecifierQualifier  |                       |  |       |  |  |
+    |                       +-----------------+--+  |  |       |  |  |
+    |                       |                 |  |  |  |       |  |  |
+    v                       v                 |  |  |  |       |  |  |
+    TypeSpecifier           DirectDeclarator  |  |  |  |       |  |  |
+    |                       |                 |  |  |  |       |  |  |
+    v                       v                 v  v  v  v       v  v  v
+    int                     main              (  )  {  return  0  ;  }
+</code></pre>
+<hr>
+<h3 id="step-21">Step #21:</h3>
+<p>The machine is in the state #6, with <code>CompoundStatement</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#6 is the shift-item</p>
+<p><code>[FunctionBody -&gt; . CompoundStatement] jump=3458</code>.</p>
+<p>After the shift, the stack is:</p>
+<pre><code>    #3458
+    CompoundStatement
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The choice of items in the item-set-#3458 is the reduce-item</p>
+<p><code>[FunctionBody -&gt; CompoundStatement .] las: ... eof ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>FunctionBody</code>, with the
+stack as shown below:</p>
+<pre><code>    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The parse forest is:</p>
+<pre><code>       FunctionBody
+       |
+       v
+       CompoundStatement
+       |
+       +--+-------------------------------+
+       |  |                               |
+       |  v                               |
+       |  BlockItemList                   |
+       .  .                               .
+       .  .                               .
+       .  .                               .
+       .  .                               .
+</code></pre>
+<hr>
+<h3 id="step-22">Step #22:</h3>
+<p>The machine is in the state #6, with <code>FunctionBody</code> as the
+current token.</p>
+<p>The choice of items in the item-set-#6 is the shift-item</p>
+<p><code>[FunctionDefinition -&gt; DeclarationSpecifiers Declarator . FunctionBody] jump=7</code>.</p>
+<p>After the shift:</p>
+<pre><code>    #7
+    FunctionBody
+    --------------------------------------------------
+    #6
+    Declarator
+    --------------------------------------------------
+    #5
+    DeclarationSpecifiers
+    --------------------------------------------------
+    #0
+    --------------------------------------------------
+</code></pre>
+<p>The choice of items in the item-set-#7 is the reduce-item</p>
+<p><code>[FunctionDefinition -&gt; DeclarationSpecifiers Declarator FunctionBody .] las: ... eof ...</code>,</p>
+<p>with its look-ahead constraint satisfied.</p>
+<p>After the reduction, the current token is <code>FunctionDefinition</code>, with the
+stack as shown below:</p>
+<pre><code>    #0
+    --------------------------------------------------
+</code></pre>
+<hr>
+<h3 id="step-23">Step #23:</h3>
+<p>After a few more steps, the machine reaches its final state, with a successful
+parse, with the current token set to <code>TranslationObject</code>.</p>
+<p>The stack is:</p>
+<pre><code>    #0
+    --------------------------------------------------
+</code></pre>
+<p>The (complete) parse tree is:</p>
+<pre><code>    TranslationObject
+    |
+    v
+    TranslationUnit
+    |
+    v
+    ExternalDeclaration
+    |
+    v
+    FunctionDefinition
+    |
+    +--+
+    |  |
+    |  v
+    |  FunctionBody
+    |  |
+    |  v
+    |  CompoundStatement
+    |  |
+    |  +--+-------------------------------+
+    |  |  |                               |
+    |  |  v                               |
+    |  |  BlockItemList                   |
+    |  |  |                               |
+    |  |  v                               |
+    |  |  BlockItem                       |
+    |  |  |                               |
+    |  |  v                               |
+    |  |  UnlabeledStatement              |
+    |  |  |                               |
+    |  |  v                               |
+    |  |  JumpStatement                   |
+    |  |  |                               |
+    |  |  +--+-------------------------+  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  Expression                |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  AssignmentExpression      |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  ConditionalExpression     |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  LogicalOrExpression       |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  LogicalAndExpression      |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  InclusiveOrExpression     |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  ExclusiveOrExpression     |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  AndExpression             |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  EqualityExpression        |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  RelationalExpression      |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  ShiftExpression           |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  AdditiveExpression        |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  MultiplicativeExpression  |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  CastExpression            |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  UnaryExpression           |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  PostfixExpression         |  |
+    |  |  |  |                         |  |
+    |  |  |  v                         |  |
+    |  |  |  PrimaryExpression         |  +--------------------------+
+    |  |  |  |                         +--------------------------+  |
+    |  |  |  +-------------------------------------------------+  |  |
+    |  |  +--------------------------------------------+       |  |  |
+    |  +--------------------------------------------+  |       |  |  |
+    +-----------------------+                       |  |       |  |  |
+    |                       |                       |  |       |  |  |
+    |                       v                       |  |       |  |  |
+    v                       Declarator              |  |       |  |  |
+    DeclarationSpecifiers   |                       |  |       |  |  |
+    |                       v                       |  |       |  |  |
+    v                       DirectDeclarator        |  |       |  |  |
+    DeclarationSpecifier    |                       |  |       |  |  |
+    |                       v                       |  |       |  |  |
+    v                       FunctionDeclarator      |  |       |  |  |
+    TypeSpecifierQualifier  |                       |  |       |  |  |
+    |                       +-----------------+--+  |  |       |  |  |
+    |                       |                 |  |  |  |       |  |  |
+    v                       v                 |  |  |  |       |  |  |
+    TypeSpecifier           DirectDeclarator  |  |  |  |       |  |  |
+    |                       |                 |  |  |  |       |  |  |
+    v                       v                 v  v  v  v       v  v  v
+    int                     main              (  )  {  return  0  ;  }
+</code></pre>
+<hr>
+<h3 id="update-1-a-nameupdate1a"><strong>Update #1:</strong> <a name="update1"></a></h3>
+<p>Regenerated after fixing missing tokens in the
+<a href="https://github.com/asurati/x24">grammar.txt</a></p>
+<hr>
+<h3 id="update-2-a-nameupdate2a"><strong>Update #2:</strong> <a name="update2"></a></h3>
+<p>Regenerated after fixing the first-set for the non-terminals.</p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

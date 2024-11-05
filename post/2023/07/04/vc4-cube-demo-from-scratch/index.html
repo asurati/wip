@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>vc4: cube demo - &#39;from scratch&#39; | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">vc4: cube demo - &lsquo;from scratch&rsquo;</span></h1>
+
+<h2 class="date">2023/07/04</h2>
+</div>
+
+<main>
+<p><em>Warning: Improperly programming a GPU, or a display, may damage the devices.</em></p>
+<p>This post demonstrates a partial recreation of the
+<a href="https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/cube.c"><code>vkcube</code></a>
+application, but
+directly on the <code>vc4</code> GPU, without involving any of the software graphics APIs.
+It is a partial recreation, as the only behavior it demonstrates is a
+<a href="https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/lunarg.ppm.h"><code>LunarG</code></a>
+cube, rotating on its Y-axis. <code>vkcube</code> additionally supports speeding up or
+slowing down the spinning cube, and reversing the direction of the spin.</p>
+<hr>
+<h3 id="software"><strong>Software:</strong></h3>
+<p>The demo runs within a bare-bones supervisor-mode framework/kernel,</p>
+<ul>
+<li>that can support memory allocation and mapping of various memory types,</li>
+<li>that has basic drivers for devices such as the interrupt-controller, the
+<code>PixelValve</code> (<code>PV</code>), the <code>Hardware Video Scaler</code> (<code>HVS</code>), and <code>V3D</code>,</li>
+<li>that can bring up other CPUs,</li>
+<li>that can enable and utilize the floating-point unit, and</li>
+<li>that has support for threads.</li>
+</ul>
+<p>Such a setup allows, for instance, to run the gpu demo on cpu #3 of the
+<code>RPi3B+</code>, while the V3D and the PV interrupts occur and are handled on
+cpu #0. Such a setup forces upon this tiny system the problem of correctly
+dealing with any inter-processor communication required
+(for e.g. locks and memory barriers) for correct operation.</p>
+<p>It also requires one to deal with caching, both from the CPU side and from the
+GPU side. For instance, since the cube rotates <code>4°</code> every frame, the <code>MVP</code>
+matrix that is passed to the shaders as <code>uniform</code> also changes every frame.
+If the matrix is
+stored in an
+<a href="https://developer.arm.com/documentation/den0024/a/Memory-Ordering/Memory-attributes/Cacheable-and-shareable-memory-attributes">inner-shareable
+region</a>
+(as it is, on this setup), the
+corresponding CPU cache-lines must be cleared up to the Point of Coherency upon
+change, such that, if the GPU were to view the system RAM region housing the
+matrix, it would see the updated data. But there&rsquo;s also a <code>Uniforms Cache (QUC)</code>
+on the <em>GPU</em> side that needs to be invalidated of stale data, if the GPU is to
+successfully retrieve the updated matrix from the system RAM.</p>
+<p>The driver for the PV device allows one to receive the <code>VBLANK</code> interrupt, so
+that, in servicing it, one can ask the HVS to flip the display-list for a
+tear-free animation.</p>
+<p>The driver for the V3D device allows one to manage the Binning Memory Pool -
+the device raises an interrupt when it runs out of its working memory during the
+binning phase. Servicing that interrupt allows one to provide the device with
+the memory it needs piece by piece from a large, pre-allocated pool.</p>
+<p>The setup does have drawbacks, as it isn&rsquo;t a complete OS. For instance,
+rotating the cube requires calculating trigonometric functions, and the lack of
+a maths library in this environment forces the use of a pre-built table of
+fixed values (here, <code>sin</code>/<code>cos</code> for every <code>4°</code>, starting at <code>0°</code>).</p>
+<p>It also relies on the RPi firmware to setup the clocks and the initial
+display-list. This setup just creates multiple copies of the initial
+display-list, each copy with a different, but same-sized frame-buffer region,
+to use them as multiple images into which the GPU can render. Once an image is
+rendered into, it is sent to the HVS for presenting, and an image that has
+already been presented is pulled from the HVS to begin rendering the next frame
+into.</p>
+<hr>
+<h3 id="vertices-and-their-winding-order"><strong>Vertices, and their Winding Order:</strong></h3>
+<p>Each of the 6 faces of the cube is viewed from a position where it faces us,
+the coordinates are noted down.</p>
+<p><code>vkcube</code> defines a <code>2x2x2</code>-sized cube, centered at the origin of the
+<code>object-space</code>. It lists the vertices in a CCW order. The object-space and
+the <code>world-space</code> coincide - the model-matrix would have been identity, if not
+for the requirement of rotating the cube. The <code>eye/camera</code> is at <code>(0,3,5)</code> in
+the world-space coordinates (assuming the <code>RHS</code> coordinate system), looking
+right at the origin <code>(0,0,0)</code> of the world-space coordinate, without any twists
+or turns along its (camera&rsquo;s) Z-axis. As a result, the <code>+Z</code> cube face is facing
+the camera.</p>
+<p>As described in the
+<a href="/wip/post/2023/06/30/vc4-winding-order/">vc4: Winding Order</a> post,
+this demo chooses to rely on the the default CCW front-winding and the <code>Y-flip</code>
+of the clip-space coordinates, to draw the cube. This forces the vertices to be
+initially provided in the <code>CW</code> winding-order; after the multiplication by the
+MVP matrix and a Y-flip in the coordinate and vertex shaders, the primitive
+processing stage of the GPU sees the default: CCW as front-winding and CW as
+back-winding.</p>
+<p>Below is the vertex and texture coordinate information for the face situated
+at <code>-Z</code> axis, i.e. the <code>XY</code> face situated at <code>Z=-1</code>.</p>
+<pre><code>                   ^ +y
+         A         |            B
+    obj(1,1,-1)    |       obj(-1,1,-1)
+    tex(0,1)       |       tex(1,1)
+                   |
+                   |
+    +x &lt;-----------+--------------&gt;
+                   |
+                   |
+    tex(0,0)       |       tex(1,0)
+    obj(1,-1,-1)   |       obj(-1,-1,-1)
+        D          |          C
+
+</code></pre>
+<pre><code class="language-c">    // Vertex Coordinates, in CW order.
+    1, 1, -1,		// A
+    -1, -1, -1,		// C
+    1, -1, -1,		// D
+
+    1, 1, -1,		// A
+    -1, 1, -1,		// B
+    -1, -1, -1,		// C
+
+    // Texture Coordinates, corresponding to the 6 vertices.
+    0, 1,
+    1, 0,
+    0, 0,
+    0, 1,
+    1, 1,
+    1, 0,
+</code></pre>
+<p>This CW winding-order, when looked at from the point-of-view of the camera,
+turns into a CCW ordering; that turn occurs after multiplication by the MVP
+matrix (the View Matrix, specifically) when running the vertex shader.
+The clip-space Y-flip then turns the ordering back into the CW winding-order.
+As a result, this <code>-Z</code> face is treated as a back-face by the primitive
+processing stage and is culled, as it should be; asking the GPU to draw only
+this face results in a blank image filled with the clear color. Of course, due
+to the rotation, when the -Z face happens to face the camera, it is rendered as
+expected.</p>
+<hr>
+<h3 id="model-matrix"><strong>Model matrix:</strong></h3>
+<p><code>vkcube</code>, by default, rotates CW on its Y-axis, when viewed from top
+(i.e. from a point on +Y-axis towards the origin).
+Considering the RHS coordinate system, and the Y-flips needed reconcile the
+differences between the GPU and the display pipeline, the matrix that is needed
+is the one that describes a <em>CCW</em> rotation by a positive angle around the
+Y-axis when viewed from top.</p>
+<p>The rotation matrix (all matrices here are row-major order) is as below, where
+the angle is the previous angle + 4°:</p>
+<pre><code>    +---                        ---+
+    | cos(angle)  0  -sin(angle)  0|
+    | 0           1  0            0|
+    | sin(angle)  0  cos(angle)   0|
+    | 0           0  0            1|
+    +---                        ---+
+</code></pre>
+<hr>
+<h3 id="view-matrix"><strong>View matrix:</strong></h3>
+<p>The coordinate transformation, based on the properties defined by <code>vkcube</code>,
+is as shown below:</p>
+<pre><code>    eye: (0, 3, 5)
+    lookat/center: (0, 0, 0)
+    up: (0, 1, 0)
+
+    view.zvec = normalize(eye - lookat)
+              = normalize(0, 3, 5)
+              = (0, 0.5145, 0.8575)
+
+    view.xvec = normalize(up cross view.zvec)
+              = (1, 0, 0)
+
+    view.yvec = view.zvec cross view.xvec
+              = (0, 0.8575, -0.5145)
+
+    view matrix = basis-vectors * translation
+
+    +---                ---+   +---      ---+
+    | 1  0        0       0|   | 1  0  0   0|
+    | 0  0.8575  -0.5145  0| * | 0  0  0  -3| =
+    | 0  0.5145   0.8575  0|   | 0  0  0  -5|
+    | 0  0        0       1|   | 0  0  0   1|
+    +---                ---+   +---      ---+
+
+    +---                     ---+
+    | 1  0        0        0    |
+    | 0  0.8575  -0.5145   0    |
+    | 0  0.5145   0.8575  -5.831|
+    | 0  0        0        1    |
+    +---                     ---+
+</code></pre>
+<hr>
+<h3 id="projection-matrix"><strong>Projection matrix:</strong></h3>
+<p><code>vkcube</code> describes a perspective projection by setting the Y-FOV to 45°,
+the aspect ratio to 1, the near-plane at <code>Z = -0.1</code> (in the eye-space) and
+the far-plane at <code>Z = -100</code> (again, in the eye-space). The aspect ratio is 1
+because the initial window that <code>vkcube</code> creates is a square window. But this
+demo has RPi running at a <code>800 x 600</code> resolution. The aspect ratio is adjusted
+accordingly.</p>
+<p>The calculation of the width and height of the near-plane, based on the Y-FOV
+and the aspect-ratio:</p>
+<pre><code>    The eye-space coordinate system:
+                                   ^ +y
+                                   |
+                                   |
+                                **** (0,t,-0.1)
+                          ***      |
+     (0,0,0)       ****            |
+     eye      ***                  |
+          **                       |
+      E *--------------------------+----------------------&gt; -z
+        &lt;----------- 0.1 ---------&gt;| (0,0,-0.1)
+                                   |
+                                   |
+                                   |
+                                   * (0,-t,-0.1)
+                                   |
+                                   |
+                                   v -y
+
+    The triangle formed by (0,0,0) (0,0,-0.1) and (0,t,-0.1) has 45°/2 = 22.5°
+    angle at the point E.
+
+    tan(22.5°) = 0.4142 = t / 0.1.
+    Hence, t = 0.04142 units.
+
+    The height of the near-plane is thus 0.04142 * 2 = 0.08284 units.
+    The aspect ratio of the viewport, and therefore of the near-plane, is
+    800/600. This gives the width of the near-plane as
+    800 * 0.08284 / 600 = 0.11045
+</code></pre>
+<p>The calculation of a perspective projection matrix is described, in great
+detail, <a href="http://www.songho.ca/opengl/gl_projectionmatrix.html">here</a>. Based on
+its calculations, and those above, the perspective projection matrix is:</p>
+<pre><code>    +---                             ---+
+    | n/r  0     0             0        |
+    | 0    n/t   0             0        |
+    | 0    0    -(f+n)/(f-n)  -2fn/(f-n)|
+    | 0    0    -1             0        |
+    +---                             ---+
+
+    where,
+    n = 0.1,
+    f = 100,
+    r = 0.11045 / 2 = 0.05523,
+    t = 0.04142,
+    resulting in,
+
+    +---                         ---+
+    | 1.8106  0       0       0     |
+    | 0       2.4143  0       0     |
+    | 0       0      -1.002  -0.2002|
+    | 0       0      -1       0     |
+    +---                         ---+
+
+</code></pre>
+<hr>
+<h3 id="mvp-matrix"><strong>MVP matrix:</strong></h3>
+<p>Since the rotation matrix changes every frame, the MVP matrix is filled in by
+multiplying the VP matrix (projection * view in that order) and the rotation
+matrix R, like so: VP * R in that order.</p>
+<hr>
+<h3 id="control-lists"><strong>Control Lists:</strong></h3>
+<p>The Binner Control List must be provided with an initial Tile Allocation Memory,
+even if it is just one page. If the Tile Allocation Memory Base and Size are
+both kept 0, and even if the <code>OUTOMEM</code> irq handler hands out pages when needed,
+the renderer thread enters an error condition as signaled by the <code>CT1CS.CTERR</code>
+bit.</p>
+<p>There are two attribute arrays, one that stores the vertex coordinate
+information, and the other stores the texture coordinate information.
+The binner needs access to
+only the vertex coordinate information to build the tile-lists. The varyings
+(such as the texture coordinates) are needed later by the renderer when the
+vertex shader runs. By separating the attributes, one can avoid loading
+unnecessary data that pollutes the caches.</p>
+<hr>
+<h3 id="texture"><strong>Texture:</strong></h3>
+<p>The
+<a href="https://github.com/KhronosGroup/Vulkan-Tools/blob/main/cube/lunarg.ppm.h"><code>LunarG</code></a>
+texture is converted to the T-format as described in the
+<a href="/wip/post/2023/06/27/vc4-t-format-textures/">vc4: T-format textures</a> post.</p>
+<p>Since the linear format, from which the T-format buffer is created, has the
+start of the texture buffer storing the top-row of the image instead of the
+bottom row, the texture configuration has the <code>FLIPY</code> bit enabled to let the
+GPU know that it must compensate for the reversed ordering.</p>
+<p>If the T-format buffer were created from a linear format that had the
+image vertically flipped, then the <code>FLIPY</code> bit would not need to be set.</p>
+<hr>
+<h3 id="coordinate-and-vertex-shaders"><strong>Coordinate and Vertex shaders:</strong></h3>
+<p>The coordinate and vertex shaders share similar code.
+The format of the coordinate shader output is the described by the
+<code>Shaded Coordinates Format in VPM for PTB</code> in the
+<a href="https://docs.broadcom.com/doc/12358545">V3D Architecture Reference Guide</a></p>
+<p>The same guide also describes the format of the vertex shader output,
+<code>Shaded Vertex Format in VPM for PSE</code>.</p>
+<p>The vertex shader outputs 5 varyings: the <code>xyz</code> clip-coordinates and the <code>st</code>
+texture-coordinates for each shaded vertex. These varyings are then
+interpolated and provided to the fragment shader.</p>
+<hr>
+<h3 id="pixel-and-element-relation"><strong>Pixel and Element relation:</strong></h3>
+<p>GPUs seem to prefer rendering pixels in a group of aligned <code>2x2</code> block of
+pixels, also called a pixel-quad.</p>
+<p>With <code>vc4</code> GPU too, each QPU processes a pixel-quad when running fragment
+shaders. Not only that, since each QPU is considered to be a 16-way SIMD
+processor, it processes aligned blocks of <code>4x4</code> pixels, one pixel-quad inside
+it at a time.</p>
+<p>Within an aligned block of <code>4x4</code> pixels, which SIMD-element, out of the 16
+SIMD-elements of a QPU, is responsible for which pixel, can be known by running
+a series of the following fragment shaders:</p>
+<pre><code class="language-c">    0x159a7d80, 0x10020827, /* or       r0, element_number, element_number; */
+    0xff000000, 0xe0020867, /* li       r1, -, 0xff000000; */
+    0x0d9c01c0, 0xd00228a7, /* sub      r2, r0, 0 sf; */
+    0xffffffff, 0xe0040867, /* li.zs.never r1, -, 0xffffffff; */
+    0x159e7240, 0x10020ba7, /* or       tlb_color_all, r1, r1; */
+    0x009e7000, 0x500009e7, /* score_board_unlock; */
+    0x009e7000, 0x300009e7, /* program_end; */
+    0x009e7000, 0x100009e7, /* ;        */
+    0x009e7000, 0x100009e7, /* ;        */
+</code></pre>
+<p>The shader outputs the color white if the SIMD-element on which this shader
+instance is running is 0. The rest (15 in number) of the shader instances,
+running on the same QPU as the instance with SIMD-element 0, color their pixel
+black. In the rendered frame-buffer, the lone white pixel in a block of aligned
+<code>4x4</code> pixels reveals the position, within the <code>4x4</code> pixels block, of the
+SIMD-element that was responsible for coloring the white pixel.</p>
+<p>By running such a series of fragment shaders, one for each SIMD-element, the
+following pattern emerges, at least around the origin.</p>
+<pre><code>    ^ +y
+    |
+    |.
+   7|.
+   6|.
+   5|o...
+   4|e...
+   3|o...
+   2|e...
+   1|ooo...
+   0|eee...
+    +-------------------------&gt; +x
+    frame-buffer
+    origin
+</code></pre>
+<p>A point marked <code>e</code> denotes an aligned block of <code>4x4</code> pixels that is at an even
+Y-position, while a point marked <code>o</code> denotes a similar block that is
+at an odd Y-position.</p>
+<p>The relation between an even block and a QPU&rsquo;s elements is
+shown below. Pixels positions are implicit, while the numbers denote the
+particular SIMD-element number that was responsible for coloring the
+corresponding pixel white.</p>
+<pre><code>    // Even block
+
+    6   7   10   11
+    4   5   08   09
+    2   3   14   15
+    0   1   12   13
+</code></pre>
+<p>Similarly, for odd block of aligned <code>4x4</code> pixels.</p>
+<pre><code>   // Odd block
+
+   10   11   6   7
+   08   09   4   5
+   14   15   2   3
+   12   13   0   1
+</code></pre>
+<p>Within each aligned <code>4x4</code> block of pixels assigned to a QPU, the QPU processes
+one pixel-quad at a time (since, although a QPU is considered to be a
+16-way SIMD processor, physically it is a 4-way SIMD processor multiplexed
+4x over 4 clock cycles).</p>
+<p>Since <code>vkcube</code> relies on <code>dFdx</code> and <code>dFdy</code> in its fragment shader
+to perform lighting calculations, the exact layout of a pixel-quad
+is needed. From the above layouts, one can derive a finer relation between a
+pixel-quad and the 4 physical QPU SIMD-elements:</p>
+<pre><code>    ^ +y
+    |
+    |
+    |     **   &lt;-- pixel-quad
+    |     **
+    |
+    |
+    |
+    |
+    +---------------------&gt; +x
+    frame-buffer
+    origin
+
+    // pixel-quad from above, blown up in size, below:
+
+    *       *
+    2       3
+
+    *       *
+    0       1
+</code></pre>
+<p>The number below each pixel is given by the expression <code>element_numer &amp; 3</code>.</p>
+<p>The 4 pixel-quads, within each aligned <code>4x4</code> block of pixels, are each
+processed by <a href="https://github.com/anholt/mesa/issues/12">similar SIMD-elements</a>.</p>
+<p>This fact is exploited by <code>vkcube</code> fragment shader to calculate the partial
+derivatives of the clip-space-position varying, with respect to the X and the Y
+directions.</p>
+<p>For each (marked by <code>*</code>) of the 4 pixels of a pixel-quad, the <code>dX</code> and <code>dY</code>
+vectors of a per-pixel or per-fragment varying function
+(such as the clip-space-position in <code>vkcube</code>) are:</p>
+<pre><code>    ^ +y                                 ^ +y
+    |                                    |
+    |       dX                           |         dX
+    |     *-------&gt;.                     |     .-------&gt;*
+    |     ^                              |              ^
+    |   dY|                              |              | dY
+    |     |                              |              |
+    |     .        .                     |     .        .
+    |                                    |
+    +---------------------&gt; +x           +---------------------&gt; +x
+    frame-buffer                         frame-buffer
+    origin                               origin
+
+
+
+    ^ +y                                 ^ +y
+    |                                    |
+    |                                    |
+    |     .        .                     |     .        .
+    |     ^                              |              ^
+    |   dY|                              |              | dY
+    |     |                              |              |
+    |     *-------&gt;.                     |     .-------&gt;*
+    |       dX                           |       dX
+    +---------------------&gt; +x           +---------------------&gt; +x
+    frame-buffer                         frame-buffer
+    origin                               origin
+</code></pre>
+<p>In each case, the cross product of <code>dX</code> and <code>dY</code>, in that order, results in the
+surface normal at the given pixel.</p>
+<hr>
+<h3 id="fragment-shader"><strong>Fragment shader:</strong></h3>
+<p>As described <a href="https://github.com/anholt/mesa/issues/12">here</a>, the fragment
+shader can rely on the <code>element_number</code> of SIMD-element running an instance of
+the shader, and on the <code>mul rotation</code> feature of the QPU, to calculate the
+derivatives.</p>
+<p>While testing the fragment shader, if the rotations were calculated as shown
+below, the rendered output had black pixels due to negative dot products of the
+surface normal and the light vector. The rendering was as if a fine grill of
+black pixels were laid on top of the cube.</p>
+<pre><code class="language-c">    /* func_dfdx: */
+    . . .
+    . . .
+    0x809ff000, 0xd00099c0, /* v8min.zs a0, r0, rot15; */
+    0x809ff009, 0xd00099c1, /* v8min.zs a1, r1, rot15; */
+    0x809ff012, 0xd00099c2, /* v8min.zs a2, r2, rot15; */
+    0x02027c00, 0x10040027, /* fsub.zs  a0, a0, r0; */
+    0x02067c40, 0x10040067, /* fsub.zs  a1, a1, r1; */
+    0x020a7c80, 0x100400a7, /* fsub.zs  a2, a2, r2; */
+    . . .
+    . . .
+</code></pre>
+<p>After hours of debugging, the pattern shown below, worked. It seems that
+back-to-back rotation calculations do not give accurate results. The <code>nop</code>
+after each rotation instruction is required, since otherwise, the <code>fsub</code>
+instruction would be reading from a location in A-reg-file that was written to
+by the immediately preceding rotation instruction.</p>
+<pre><code class="language-c">    /* func_dfdx: */
+    . . .
+    . . .
+    0x809ff000, 0xd00099c0, /* v8min.zs a0, r0, rot15; */
+    0x009e7000, 0x100009e7, /* ;        */
+    0x02027c00, 0x10040027, /* fsub.zs  a0, a0, r0; */
+
+    0x809ff009, 0xd00099c1, /* v8min.zs a1, r1, rot15; */
+    0x009e7000, 0x100009e7, /* ;        */
+    0x02067c40, 0x10040067, /* fsub.zs  a1, a1, r1; */
+
+    0x809ff012, 0xd00099c2, /* v8min.zs a2, r2, rot15; */
+    0x009e7000, 0x100009e7, /* ;        */
+    0x020a7c80, 0x100400a7, /* fsub.zs  a2, a2, r2; */
+    . . .
+    . . .
+</code></pre>
+<blockquote>
+<p>The <code>v8min.zs a0, r0, rot15;</code> instruction is really encoded as
+<code>v8min.zs a0, r0, r0, rot15;</code>, but the parser in my assembler isn&rsquo;t complete
+enough to parse the latter expression.</p>
+</blockquote>
+<hr>
+<h3 id="result"><strong>Result:</strong></h3>
+<p><a href="https://drive.google.com/file/d/1Vik78wRVhf6n42fvoIMDjL02OuKxzR8v/view?usp=sharing">Here</a>
+is a video capture of the <code>RPi3B+</code> booting and spinning the cube. The
+rendering is a bit darker, for some reason, than that of the <code>vkcube</code> running
+with <code>mesa</code> on an <code>Intel IvyBridge</code> machine.</p>
+<blockquote>
+<p>It seems that Google Drive allows online playback of the video only at 360p,
+even though the video resolution is 800x600. Downloading the file first and
+then playing it in the browser, displays the video at its original
+resolution.</p>
+</blockquote>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HVS and PV Settings | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">HVS and PV Settings</span></h1>
+
+<h2 class="date">2021/10/07</h2>
+</div>
+
+<main>
+<p>This post investigates the contents of the registers belonging to the
+Hardware Video Scaler (HVS), and to the PixelValve (PV) devices.</p>
+<p>When a request is made to the
+<a href="https://github.com/raspberrypi/firmware/wiki/Mailbox-property-interface#allocate-buffer">MailBox</a>
+interface for a Frame Buffer with required properties, the RPi firmware
+programs the HVS and the PV in order to drive the display accordingly.</p>
+<p>The demos have been requesting a resolution of 640x480, 32bpp, with a default
+pixel order of BGRA8888 (0xaarrggbb, or ARGB32).</p>
+<hr>
+<h3 id="hvs-registers"><strong>HVS Registers:</strong></h3>
+<p>HVS has 3 FIFOs/channels which it fills with
+scaled/transformed/converted/composited pixels. Each FIFO is connected to an
+HVS output, and each such output is connected to a PixelValve.</p>
+<p>These mappings are quite static within VideoCoreIV, with one-to-one mapping
+between the HVS FIFOs/channels and the HVS outputs, and between the HVS outputs
+and the PixelValves.</p>
+<p>The mapping between the HVS FIFOs and the PixelValves is:</p>
+<p>FIFO0/channel0 with PV0.</p>
+<p>FIFO1/channel1 with PV2.</p>
+<p>FIFO2/channel2 with PV1.</p>
+<p>The HDMI display is driven by PV2. The same PixelValve PV2 can also drive the
+SDTV output instead.</p>
+<p>The (FIFO2, PV1) pairing can be broken to allow the transposer (TXP) to
+redirect the corresponding HVS output into the system RAM.</p>
+<p>The list of HVS registers, and their contents.</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">HVS Word</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left"><code>[0x0]=0x9a0c0fff</code></td>
+          <td><code>DISPCTRL</code> register.<br/><code>[31]</code> = <code>1</code>. Enable bit.<br/><code>[19:18]</code> = <code>3</code>. DSP3 output (connected to PV1) is disabled. This setting breaks the pairing between FIFO2 and PV1.<br/> <code>[15:0]</code> = <code>0xfff</code>. Enable interrupts corresponding to various events.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x1]=0</code></td>
+          <td><code>DISPSTAT</code> register.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x2]=0x64647276</code></td>
+          <td><code>ID</code> register.<br/>The ASCII string is <code>vrdd</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x8]=0x0</code></td>
+          <td><code>DISPLIST0</code> register.<br/>The index into the DisplayList Area (itself at index 0x800 from the start of the HVS register area) where the DisplayList for FIFO0/channel0 resides.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x9]=0x664</code></td>
+          <td><code>DISPLIST1</code> register.<br/>Same as above, but for FIFO1/channel1.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xa]=0x0</code></td>
+          <td><code>DISPLIST2</code> register.<br/>Same as above, but for FIFO2/channel2.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xc]=0x0</code></td>
+          <td><code>DISPLACT0</code> register.<br/>The index into the DisplayList Area where the Active DisplayList for FIFO0/channel0 resides.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xd]=0x994</code></td>
+          <td><code>DISPLACT1</code> register.<br/>Same as above, but for FIFO1/channel1.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe]=0x0</code></td>
+          <td><code>DISPLACT2</code> register.<br/>Same as above, but for FIFO2/channel2.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The DisplayLists at index 0x0:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">HVS Word</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left"><code>[0x800]=0x80000000</code></td>
+          <td><code>CTL0</code> register.<br/><code>[31]</code> = <code>1</code>. Marks the end of the list.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The DisplayLists at index 0x664. This list corresponds to the frame buffer setup by U-Boot.</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">HVS Word</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left"><code>[0xe64]=0x4e007807</code></td>
+          <td><code>CTL0</code> register.<br/><code>[30]</code> = <code>1</code>. Valid list.<br/><code>[29:24]</code> = <code>14</code>. The number of valid words in this list, excluding the word that marks the end of the list.<br/><code>[21:20]</code> = <code>0</code>. Linear Tiling.<br/><code>[16]</code> = <code>0</code>. No horizontal flip.<br/><code>[15]</code> = <code>0</code>. No vertical flip.<br/><code>[14:13]</code> = <code>3</code>. Pixel Order is ABGR32. This value is in conflict with the actual frame buffer order ARGB32. Perhaps the HVS is converting from the input format.<br/><code>[12:11]</code> = <code>3</code>. RGBA rounding.<br/><code>[10:8]</code> = <code>0</code>. SCL1 (CbCr plane) scaling. Set to the same as SCL0 scaling.<br/><code>[7:5]</code> = <code>0</code>. SCL0 scaling (RGB, or Y plane). Horizontal and Vertical scaling is to be performed by a Polyphase Filter (PPF).<br/><code>[4]</code> = <code>0</code>. Unity not set.<br/><code>[3:0]</code> = <code>7</code>. Pixel Format is RGBA8888. This value is in conflict with the actual frame buffer format BGRA8888.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe65]=0xff016000</code></td>
+          <td><code>POS0</code> register.<br/><code>[31:24]</code> = <code>0xff</code>. Value of alpha when the alpha is considered fixed.<br/><code>[23:12]</code> = <code>22</code>. Pixel position in the Y direction where the first row of pixels starts.<br/><code>[11:0]</code> = <code>0</code>. Pixel position in the X direction where the first column of the pixels starts.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe66]=0x40b0780</code></td>
+          <td><code>POS1</code> register.<br/><code>[27:16]</code> = <code>1035</code>. Destination/Output Height in pixels.<br/><code>[11:0]</code> = <code>1920</code>. Destination/Output Width in pixels.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe67]=0x43d80720</code></td>
+          <td><code>POS2</code> register.<br/><code>[31:30]</code> = <code>1</code>. Source Alpha Mode is Fixed Mode.<br/>[27:16] = <code>984</code>. Source/Input Height in pixels.<br/><code>[11:0]</code> = <code>1824</code>. Source/Input Width in pixels.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe68]=0x3d70000</code></td>
+          <td><code>POS3</code> register.<br/>Context, written by HVS.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe69]=0x9e513000</code></td>
+          <td><code>POINTER</code> register.<br/>The bus address of the source/input frame buffer.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe6a]=0x9ebe9f80</code></td>
+          <td><code>POINTER CONTEXT</code> register.<br/>Written by HVS.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe6b]=0x1c80</code></td>
+          <td><code>PITCH0</code> register.<br/><code>1824 * 4</code> = <code>7296</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe6c]=0x8300</code></td>
+          <td><code>LBM</code> register.<br/>Line Buffer Memory, utilized as temporary storage by HVS when performing the scaling/conversion.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe6d]=0x40f33261</code></td>
+          <td><code>CH0-HPPF0</code> register.<br/>The scaling factor for Horizontal scaling using a PPF, for channel0.<br/><code>[24:8]</code> = <code>0xf332</code>. Source Width / Destination Width * 2^16.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe6e]=0x40f36260</code></td>
+          <td><code>CH0-VPPF0</code> register.<br/>The scaling factor for Vertical scaling using a PPF, for channel0.<br/><code>[24:8]</code> = <code>0xf362</code>. Source Height / Destination Height * 2^16.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe6f]=0x17d36</code></td>
+          <td><code>CH0-VPPF1</code> register.<br/>The context register for the PPF scaler.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe70]=0xff4</code></td>
+          <td>The index into the DisplayList Area where the PPF kernel parameters for horizontal scaling are stored. For the RGB plane.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe71]=0xff4</code></td>
+          <td>The index into the DisplayList Area where the PPF kernel parameters for vertical scaling are stored. For the RGB plane.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0xe72]=0x80000000</code></td>
+          <td><code>CTL0</code> register.<br/><code>[31]</code> = <code>1</code>. Marks the end of the list.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The PPF being utilized is the Mitchell-Netravali filter. The parameters are packed as 9-bit signed integers - 3 such integers per word. Each such integer is the value of the function, multiplied by 256, at some x in [-2, 2].</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">HVS Word</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left"><code>[0x17f4]=7ebfc00</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17f5]=7e3edf8</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17f6]=4805fd</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17f7]=1dca432</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17f8]=355769b</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17f9]=1c6e3</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17fa]=355769b</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17fb]=1dca432</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17fc]=4805fd</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17fd]=7e3edf8</code></td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x17fe]=7ebfc00</code></td>
+      </tr>
+  </tbody>
+</table>
+<p>The DisplayLists at index 0x994. This list corresponds to the frame buffer setup by the demos.</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">HVS Word</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left"><code>[0x1194]=0x4e007807</code></td>
+          <td><code>CTL0</code> register.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x1195]=0xff0000f0</code></td>
+          <td><code>POS0</code> register.<br/><code>[23:12]</code> = <code>0</code>. Pixel position in the Y direction where the first row of pixels starts.<br/><code>[11:0]</code> = <code>240</code>. Pixel position in the X direction where the first column of the pixels starts.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x1196]=0x43805a0</code></td>
+          <td><code>POS1</code> register.<br/><code>[27:16]</code> = <code>1080</code>. Destination/Output Height in pixels.<br/><code>[11:0]</code> = <code>1440</code>. Destination/Output Width in pixels.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x1197]=0x41e00280</code></td>
+          <td><code>POS2</code> register.<br/>[27:16] = <code>480</code>. Source/Input Height in pixels.<br/><code>[11:0]</code> = <code>640</code>. Source/Input Width in pixels.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x1198]=0x8d0000</code></td>
+          <td><code>POS3</code> register.<br/>Context, written by HVS.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x1199]=0x9eac0000</code></td>
+          <td><code>POINTER</code> register.<br/>The bus address of the source/input frame buffer.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x119a]=0x9eb52e00</code></td>
+          <td><code>POINTER CONTEXT</code> register.<br/>Written by HVS.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x119b]=0xa00</code></td>
+          <td><code>PITCH0</code> register.<br/><code>640 * 4</code> = <code>2560</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x119c]=0xa800</code></td>
+          <td><code>LBM</code> register.<br/>Line Buffer Memory, utilized as temporary storage by HVS when performing the scaling/conversion.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x119d]=0x4071c660</code></td>
+          <td><code>CH0-HPPF0</code> register.<br/>The scaling factor for Horizontal scaling using a PPF, for channel0.<br/><code>[24:8]</code> = <code>0x71c6</code>. Source Width / Destination Width * 2^16.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x119e]=0x4071c660</code></td>
+          <td><code>CH0-VPPF0</code> register.<br/>The scaling factor for Vertical scaling using a PPF, for channel0.<br/><code>[24:8]</code> = <code>0x71c6</code>. Source Height / Destination Height * 2^16.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x119f]=0xc000b46a</code></td>
+          <td><code>CH0-VPPF1</code> register.<br/>The context register for the PPF scaler.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x11a0]=0xff4</code></td>
+          <td>The index into the DisplayList Area where the PPF kernel parameters for horizontal scaling are stored. For the RGB plane.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x11a1]=0xff4</code></td>
+          <td>The index into the DisplayList Area where the PPF kernel parameters for vertical scaling are stored. For the RGB plane.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x11a2]=0x80000000</code></td>
+          <td><code>CTL0</code> register.<br/><code>[31]</code> = <code>1</code>. Marks the end of the list.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+<h3 id="pixelvalve-registers"><strong>PixelValve Registers:</strong></h3>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: left">PV Word</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: left"><code>[0x0]=0x177005</code></td>
+          <td><code>CONTROL</code> register.<br/><code>[23:21]</code> = <code>0</code>. Format 24.<br/><code>[20:15]</code> = <code>46</code>. FIFO Level.<br/><code>[14]</code> = <code>1</code>. Clear at Start.<br/><code>[13]</code> = <code>1</code>. Trigger Underflow.<br/><code>[12]</code> = <code>1</code>. Wait for HStart.<br/><code>[5:4]</code> = <code>0</code>. No Pixel Repetition.<br/><code>[3:2]</code> = <code>1</code>. Pixel Clock select. Selects HDMI encoder clock.<br/><code>[0]</code> = <code>1</code>. PV Enable.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x1]=0x3</code></td>
+          <td><code>V_CONTROL</code> register.<br/><code>[1]</code> = <code>1</code>. Continuous, as opposed to Interlaced signal.<br/><code>[0]</code> = <code>1</code>. Video Enable.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x3]=0x94002c</code></td>
+          <td><code>HORZA</code> register.<br/><code>[31:16]</code> = <code>148</code>. Horizontal Back Porch, in pixels.<br/><code>[15:0]</code> = <code>44</code>. Horizontal Sync, in pixels.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x4]=0x580780</code></td>
+          <td><code>HORZB</code> register.<br/><code>[31:16]</code> = <code>88</code>. Horizontal Front Porch, in pixels.<br/><code>[15:0]</code> = <code>1920</code>. Horizontal Active, in pixels.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x5]=0x240005</code></td>
+          <td><code>VERTA</code> register.<br/><code>[31:16]</code> = <code>36</code>. Vertical Back Porch, in lines.<br/><code>[15:0]</code> = <code>5</code>. Vertical Sync, in lines.</td>
+      </tr>
+      <tr>
+          <td style="text-align: left"><code>[0x6]=0x40438</code></td>
+          <td><code>VERTB</code> register.<br/><code>[31:16]</code> = <code>4</code>. Vertical Front Porch, in lines.<br/><code>[15:0]</code> = <code>1080</code>. Vertical Active, in lines.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

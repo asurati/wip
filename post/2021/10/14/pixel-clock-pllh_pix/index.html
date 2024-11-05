@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pixel Clock: PLLH_PIX | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Pixel Clock: PLLH_PIX</span></h1>
+
+<h2 class="date">2021/10/14</h2>
+</div>
+
+<main>
+<p>This post investigates the programming of the HDMI <code>pixel</code> clock, performed by
+the RPi firmware to push the pixels into the HDMI encoder at that frequency.</p>
+<p>Booting with the RPi firmware and the U-Boot, the actual resolution of the
+display is 1920x1080@60Hz. The resolution of the frame buffer might be lower -
+the HVS takes care of appropriately scaling and positioning the pixels.</p>
+<p>Below is the <code>Modeline</code> details about the 1920x1080@60Hz resolution. These
+details were extracted out of the <a href="https://en.wikipedia.org/wiki/Extended_Display_Identification_Data">EDID</a> information gathered from the monitor:</p>
+<pre><code>Modeline        &quot;Mode 1&quot; 148.500 1920 2008 2052 2200 1080 1084 1089 1125 +hsync +vsync
+</code></pre>
+<p>The break-down of the fields:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Value</th>
+          <th style="text-align: right">Field</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>148.500</code></td>
+          <td style="text-align: right"><code>clk</code></td>
+          <td>The pixel clock frequency/rate, in MHz.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>1920</code></td>
+          <td style="text-align: right"><code>hdisp</code></td>
+          <td>The Width of the Active Video region of a scanline, in the units of pixels or pixel-clocks.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>2008</code></td>
+          <td style="text-align: right"><code>hsyncstart</code></td>
+          <td>The point in time, in the units of pixel or pixel-clock, when the HSync Pulse starts.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>2052</code></td>
+          <td style="text-align: right"><code>hsyncend</code></td>
+          <td>The point in time, in the units of pixel or pixel-clock, when the HSync Pulse ends.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>2200</code></td>
+          <td style="text-align: right"><code>htotal</code></td>
+          <td>The total time, in the units of pixels or pixel-clocks, of a scanline, including the blanking interval.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"></td>
+          <td style="text-align: right"><code>+hsync</code></td>
+          <td>The HSync pulse is active high.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The sizes (in the units of pixels or pixel-clocks) of the various portions of
+a horizontal blanking interval can be calculated as follows:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Value</th>
+          <th style="text-align: right">Field</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>88</code></td>
+          <td style="text-align: right"><code>hfp</code></td>
+          <td>Horizontal Front Porch = <code>hsyncstart - hdisp</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>44</code></td>
+          <td style="text-align: right"><code>hsw</code></td>
+          <td>Horizontal Sync Width = <code>hsyncend - hsyncstart</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>148</code></td>
+          <td style="text-align: right"><code>hbp</code></td>
+          <td>Horizontal Back Porch = <code>htotal - hsyncend</code>.</td>
+      </tr>
+  </tbody>
+</table>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Value</th>
+          <th style="text-align: right">Field</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>1080</code></td>
+          <td style="text-align: right"><code>vdisp</code></td>
+          <td>The Height of the Active Video region of a frame, in the units of scanline.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>1084</code></td>
+          <td style="text-align: right"><code>vsyncstart</code></td>
+          <td>The time, in the units of scanline, when the VSync Pulse starts.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>1089</code></td>
+          <td style="text-align: right"><code>vsyncend</code></td>
+          <td>The time, in the units of scanline, when the VSync Pulse ends.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>1125</code></td>
+          <td style="text-align: right"><code>vtotal</code></td>
+          <td>The total time, in the units of scanlines, of a frame, including the blanking intervals.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"></td>
+          <td style="text-align: right"><code>+vsync</code></td>
+          <td>The VSync pulse is active high.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The sizes (in the units of scanlines) of the various portions of a vertical
+blanking interval can be calculated as follows:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Value</th>
+          <th style="text-align: right">Field</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>4</code></td>
+          <td style="text-align: right"><code>vfp</code></td>
+          <td>Vertical Front Porch = <code>vsyncstart - vdisp</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>5</code></td>
+          <td style="text-align: right"><code>vsw</code></td>
+          <td>Vertical Sync Width = <code>vsyncend - vsyncstart</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>36</code></td>
+          <td style="text-align: right"><code>vbp</code></td>
+          <td>Vertical Back Porch = <code>vtotal - vsyncend</code>.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The required pixel clock rate is given by <code>htotal * vtotal * refreshrate</code>, or
+<code>2200 * 1125 * 60 Hz = 148500000 Hz = 148.5 MHz</code>.</p>
+<hr>
+<p>Below is a snippet of <a href="https://github.com/raspberrypi/firmware/blob/master/boot/bcm2708-rpi-b.dtb"><code>bcm2708-rpi-b.dtb</code></a>:</p>
+<pre><code>hdmi@7e902000 {
+	compatible = &quot;brcm,bcm2835-hdmi&quot;;
+	. . .
+	clocks = &lt;0x07 0x10 0x07 0x19&gt;;
+	clock-names = &quot;pixel\0hdmi&quot;;
+	. . .
+};
+
+cprman@7e101000 {
+	compatible = &quot;brcm,bcm2835-cprman&quot;;
+	#clock-cells = &lt;0x01&gt;;
+	. . .
+	phandle = &lt;0x07&gt;;
+};
+</code></pre>
+<p>The <code>hdmi</code> node consumes two clocks, named <code>pixel</code> and <code>hdmi</code>. The <code>hdmi</code> clock
+identifies the clock which drives the HDMI State Machine (HSM). The <code>pixel</code>
+clock is the pixel clock.</p>
+<p>The provider of the pixel clock is identified as the clock with ID <code>16 (0x10)</code>
+under a <code>phandle</code> of <code>7</code>, the <code>CPRMAN</code>, the Clock, Power, and Reset Manager.</p>
+<p>Under Linux, the pixel clock is named
+<a href="https://lxr.missinglinkelectronics.com/linux/include/dt-bindings/clock/bcm2835.h">PLLH_PIX</a>.
+Its input/source is named
+<a href="https://lxr.missinglinkelectronics.com/linux/include/dt-bindings/clock/bcm2835.h">PLLH</a>, which is one of the 5 PLLs that themselves source from the main oscillator
+running at 19.2 MHz.</p>
+<p>The RPi clock tree, and the details about the circuitry that generates the output
+for the PLLs, are listed <a href="https://elinux.org/The_Undocumented_Pi">here</a>.</p>
+<p>The Linux source code for the function
+<a href="https://lxr.missinglinkelectronics.com/linux/drivers/clk/bcm/clk-bcm2835.c"><code>bcm2835_pll_get_rate</code></a>
+shows the register
+locations where the clock parameters for a PLL clock are stored; it also shows the
+method to calculate the PLL clock&rsquo;s output frequency.</p>
+<p>The register <code>A2W_PLLH_CTRL</code> has the value <code>0x2104d</code> (placed in there by the
+RPi firmware). This value implies that
+<code>NDIV</code> is set to <code>0x4d</code>, and <code>PDIV</code> is set to 1. The register <code>A2W_PLLH_FRAC</code>
+has the value <code>0x58000</code>. The variable <code>using_prediv</code> has the value <code>0</code>.</p>
+<p>Then, the rate at which the PLLH clock runs is calculated as:</p>
+<p><code>(19.2 MHz * ((0x4d &lt;&lt; 20) + 0x58000)) &gt;&gt; 20 = 1485 MHz</code>.</p>
+<p>The PLLH_PIX clock is a divider clock, sourcing its input from the output of
+the PLLH clock. The PLLH_PIX clock has a fixed divider of <code>10</code>, and another 8-bit
+integer divider stored in the register <code>A2W_PLLH_PIX</code>.
+Together, these dividers divide the input frequency to generate its output
+frequency.
+With the fixed divider of <code>10</code>, and the 8-bit integer divider set to <code>1</code>,
+the PLLH_PIX clock thus outputs a frequency of
+<code>1485 MHz / (10 * 1) = 148.5 MHz</code>, which is exactly the desired frequency for
+the pixel clock.</p>
+<p>The parameters set for the PLLH and the PLLH_PIX clocks, for a few more
+standard resolutions are:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Resolution</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>640x480@60Hz</code></td>
+          <td>PLLH: <code>NDIV=0x1a</code>, <code>FDIV=0x40000</code>.<br/>PLLH_PIX: 8-bit integer divisor set to <code>2</code>.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>800x600@60Hz</code></td>
+          <td>PLLH: <code>NDIV=0x14</code>, <code>FDIV=0xd5556</code>.<br/>PLLH_PIX: 8-bit integer divisor set to <code>1</code>.</td>
+      </tr>
+  </tbody>
+</table>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

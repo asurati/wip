@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>MSAA on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/msaa/</link>
+    <description>Recent content in MSAA on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 14 Jun 2022 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/msaa/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>HD 7350 demo: MSAA 8x</title>
+      <link>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/post/2022/06/14/hd-7350-demo-msaa-8x/</guid>
+      <description>&lt;p&gt;&lt;em&gt;Warning: Improperly programming a GPU, or a display, may damage the devices.&lt;/em&gt;&lt;/p&gt;&#xA;&lt;p&gt;This post demonstrates the HD7350 support for MSAA rendering, through the use&#xA;of Color Mask and Fragment Mask, the former of which facilitates Fast Clear of&#xA;a render surface, and the latter, allows drawing on compressed MSAA surfaces.&lt;/p&gt;&#xA;&lt;hr&gt;&#xA;&lt;h3 id=&#34;color-mask&#34;&gt;&lt;strong&gt;Color Mask:&lt;/strong&gt;&lt;/h3&gt;&#xA;&lt;p&gt;The Color Mask, or CMask, is a buffer, of size corresponding to the size of the&#xA;target surface to which it is attached, which allows the GPU to mark the&#xA;target surface as clear, without having to actually write the pixels on to the&#xA;target surface. The state of the control bits stored in the CMask buffer allows&#xA;the GPU to mark corresponding regions of the target surface as clear.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

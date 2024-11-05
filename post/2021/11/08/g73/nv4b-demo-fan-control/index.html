@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>G73/NV4B demo: Fan Control | w-i-p</title>
+    <link rel="stylesheet" href="/wip/css/style.css" />
+    <link rel="stylesheet" href="/wip/css/fonts.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/styles/github.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Raleway" rel="stylesheet">
+
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/wip/">Home</a></li>
+      
+      <li><a href="/wip/about/">About</a></li>
+      
+      <li><a href="/wip/categories/">Categories</a></li>
+      
+      <li><a href="/wip/tags/">Tags</a></li>
+      
+      <li><a href="/wip/index.xml">Subscribe</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">G73/NV4B demo: Fan Control</span></h1>
+
+<h2 class="date">2021/11/08</h2>
+</div>
+
+<main>
+<p>This is a demonstration of controlling the stock fan. The demo is based on the
+DCB details pasted on the
+<a href="/wip/post/2021/10/02/qpu-demo-nv-shader">GPU Passthrough, and EDID access</a>
+post.</p>
+<p><em>Warning: Improperly programming a GPU, or a display, may cause harm to the
+devices.</em></p>
+<hr>
+<h3 id="the-dcb-gpio-assignment-table"><strong>The DCB: GPIO Assignment Table</strong></h3>
+<p>The offset to the GPIO Assignment table itself lies at offset <code>0xa</code>
+from the start of the DCB.</p>
+<p>The DCB starts at offset <code>0x8dd6</code> within my BIOS ROM.</p>
+<pre><code>$ hexdump -C nv.bios.rom
+
+. . .
+00008dd0  2f 21 2c 00 71 00 30 19  0a 08 3f 8e cb bd dc 4e  |/!,.q.0...?....N|
+00008de0  78 8e 6c 8e d6 8e e2 8e  f0 8e 05 8f 31 51 59 00  |x.l.........1QY.|
+. . .
+</code></pre>
+<p>The offset to the GPIO Assignment table is thus <code>0x8e78</code>.</p>
+<pre><code>$ hexdump -C nv.bios.rom
+
+. . .
+00008e70  0f 0f 0f 0f 0f 0f 0f 0f  31 06 10 02 9e 8e 00 71  |........1......q|
+00008e80  e1 70 e0 07 e0 07 e0 07  85 20 a6 20 e0 07 e0 07  |.p....... . ....|
+00008e90  29 89 e0 07 e0 07 e0 07  e0 07 e0 07 e0 07 30 04  |).............0.|
+00008ea0  00 02 a6 8e cd 8e 30 07  10 02 00 00 00 00 00 00  |......0.........|
+. . .
+</code></pre>
+<p>The table begins with a header:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Address</th>
+          <th style="text-align: right">Value</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>0x8e78</code></td>
+          <td style="text-align: right"><code>0x31</code></td>
+          <td>Version of the GPIO Assignment table.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e79</code></td>
+          <td style="text-align: right"><code>0x6</code></td>
+          <td>Size of the Header, in bytes. The table entries immediately follow this header.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e7a</code></td>
+          <td style="text-align: right"><code>0x10</code></td>
+          <td>Number of entries inside the table.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e7b</code></td>
+          <td style="text-align: right"><code>0x2</code></td>
+          <td>Size of each entry, in bytes.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e7c</code></td>
+          <td style="text-align: right"><code>0x8e9e</code></td>
+          <td>Offset to the External GPIO Assignment Master table. It happens to contain no entries. See <a href="http://download.nvidia.com/open-gpu-doc/DCB/1/DCB-4.0-Specification.html#_external_gpio_assignment_master_table">here</a> for parsing details.</td>
+      </tr>
+  </tbody>
+</table>
+<p>Each entry is of 16 bits in size, with the following layout:</p>
+<pre><code>[15]:	PWM
+[14]:	ON Dir
+[13]:	ON Data
+[12]:	OFF Dir
+[11]:	OFF Data
+[10:5]:	Function
+[4:0]:	Pin#
+</code></pre>
+<p>The description of each of the fields is found
+<a href="http://download.nvidia.com/open-gpu-doc/DCB/1/DCB-4.0-Specification.html#_gpio_assignment_table">here</a>. The same page also lists the meanings of the values found
+in the <code>Function</code> field.</p>
+<p>The 16 entries of the GPIO Assignment table are:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Address</th>
+          <th style="text-align: right">Value</th>
+          <th style="text-align: right">PWM</th>
+          <th style="text-align: right">ON Dir</th>
+          <th style="text-align: right">ON Data</th>
+          <th style="text-align: right">OFF Dir</th>
+          <th style="text-align: right">OFF Data</th>
+          <th style="text-align: right">Function</th>
+          <th style="text-align: right">Pin#</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>0x8e7e</code></td>
+          <td style="text-align: right"><code>0x7100</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>8</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>See the table below.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e80</code></td>
+          <td style="text-align: right"><code>0x70e1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>7</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>See the table below.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e82</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e84</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e86</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e88</code></td>
+          <td style="text-align: right"><code>0x2085</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>4</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td>See the table below.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e8a</code></td>
+          <td style="text-align: right"><code>0x20a6</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td style="text-align: right"><code>6</code></td>
+          <td>See the table below.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e8c</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e8e</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e90</code></td>
+          <td style="text-align: right"><code>0x8929</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>9</code></td>
+          <td style="text-align: right"><code>9</code></td>
+          <td>See the table below.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e92</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e94</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e96</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e98</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e9a</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>0x8e9c</code></td>
+          <td style="text-align: right"><code>0x7e0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x3f</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Unused.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The entries that are linked to a valid function are:</p>
+<table>
+  <thead>
+      <tr>
+          <th style="text-align: right">Index</th>
+          <th style="text-align: right">Value</th>
+          <th style="text-align: right">PWM</th>
+          <th style="text-align: right">ON Dir</th>
+          <th style="text-align: right">ON Data</th>
+          <th style="text-align: right">OFF Dir</th>
+          <th style="text-align: right">OFF Data</th>
+          <th style="text-align: right">Function</th>
+          <th style="text-align: right">Pin#</th>
+          <th>Comment</th>
+      </tr>
+  </thead>
+  <tbody>
+      <tr>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0x7100</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>8</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td>Hotplug B signal.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0x70e1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>7</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td>Hotplug A signal.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>5</code></td>
+          <td style="text-align: right"><code>0x2085</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>4</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td>Voltage Select (VID) Bit 0.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>6</code></td>
+          <td style="text-align: right"><code>0x20a6</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>5</code></td>
+          <td style="text-align: right"><code>6</code></td>
+          <td>Voltage Select (VID) Bit 1.</td>
+      </tr>
+      <tr>
+          <td style="text-align: right"><code>9</code></td>
+          <td style="text-align: right"><code>0x8929</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>0</code></td>
+          <td style="text-align: right"><code>1</code></td>
+          <td style="text-align: right"><code>9</code></td>
+          <td style="text-align: right"><code>9</code></td>
+          <td>Fan Control.</td>
+      </tr>
+  </tbody>
+</table>
+<p>The speed of the fan is controlled by PWM signals.</p>
+<p>The duty cycle of a PWM wave is the fraction of its period during which the
+signal is high; the fan is supposed to run for that fraction of the period.
+But notice (ON/OFF Data) that the polarity of the corresponding GPIO
+pin is reversed; the fan runs for that fraction of period when the signal is
+low. That is, the signal is treated as active low. Thus, to set a duty
+cycle of 31%, one must actually program the cycle value as 100 - 31 = 69%.</p>
+<p>The values to feed into the controller registers depend on PWM divider value.
+It is found by reading the <a href="https://download.nvidia.com/open-gpu-doc/BIOS-Information-Table/1/BIOS-Information-Table.html#BIT_PERF_PTRS_v1">Performance Table</a> of the
+BIOS Information Table Specification. See the function <code>nvbios_perf_fan_parse</code>,
+<a href="https://lxr.missinglinkelectronics.com/linux/drivers/gpu/drm/nouveau/nvkm/subdev/bios/perf.c">here</a>. The value on my card happens to be <code>0x2b4 = 692</code>.</p>
+<p>To set the duty cycle to 31%, the value that needs to be programmed is
+<code>692 - (31 * 692 + 99) / 100 = 477 = 0x1dd</code>, or <code>692 - ceil(0.31 * 692) = 477</code>,
+or <code>floor(0.69 * 692) = 477</code>.</p>
+<p>To establish the duty cycle, set these values (the PWM divider and the duty
+cycle), as shown below, and then initiate an Enable control signal to activate
+the new duty cycle.
+The addresses are relative to the <code>BAR0</code> base address, and the assumption is
+that the fan control is at GPIO pin #9.</p>
+<pre><code>// Set the values.
+[0x15f8] = PWM Divider = 0x2b4
+
+// Prepare the duty cycle field to receive the new setting.
+t = [0x15f4]
+t &amp;= ~0x7fffffff
+t |= 0x1dd
+[0x15f4] = t
+
+// Enable.
+[0x15f4] |= 0x80000000
+</code></pre>
+<p>At boot, the PWM Divider register contains <code>0x2b4</code>, and the Duty Cycle register
+contains <code>0x1dd</code>, i.e. 31% duty cycle.</p>
+<hr>
+<p>The functions <code>nvkm_therm_fan_set_defaults</code> and <code>nvkm_fan_update</code>, both found
+<a href="https://lxr.missinglinkelectronics.com/linux/drivers/gpu/drm/nouveau/nvkm/subdev/therm/fan.c">here</a>, show how to gradually increase or decrease the fan speed over a
+slow gradient.</p>
+<hr>
+<p>The PWM divider value is 692. Assuming that PWM&rsquo;s input clock is the 27MHz
+crystal found on the card, the divider value generates PWM waves at a
+frequency of 27000/692 ~ 39KHz. That is equivalent to a period of 25.641 usecs.</p>
+<hr>
+
+</main>
+
+<script src="https://utteranc.es/client.js"
+        repo="asurati/wip.src"
+        theme="github-light"
+		issue-term="title"
+        crossorigin="anonymous"
+        async>
+</script>
+
+  <footer>
+  <script src="https://yihui.org/js/math-code.js"></script>
+<script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="https://yihui.org/js/center-img.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/highlight.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.2/languages/bash.min.js"></script>
+
+<script>
+hljs.configure({languages: []});
+hljs.highlightAll();
+</script>
+
+  
+  <hr/>
+  © 2021-2024 <a href="https://github.com/asurati">Amol Surati</a>. This work is made available under <a href="https://creativecommons.org/licenses/by/4.0">CC BY 4.0</a>.<br/> Theme <a href="https://github.com/yihui/hugo-xmin">hugo-xmin</a> by <a href="https://github.com/yihui">Yihui Xie</a>.
+  
+  </footer>
+  </body>
+</html>
+

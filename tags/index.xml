@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Tags on w-i-p</title>
+    <link>https://asurati.github.io/wip/tags/</link>
+    <description>Recent content in Tags on w-i-p</description>
+    <generator>Hugo</generator>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 25 Oct 2024 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://asurati.github.io/wip/tags/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>AoC</title>
+      <link>https://asurati.github.io/wip/tags/aoc/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/aoc/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>FlareOn</title>
+      <link>https://asurati.github.io/wip/tags/flareon/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/flareon/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Perl</title>
+      <link>https://asurati.github.io/wip/tags/perl/</link>
+      <pubDate>Fri, 25 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/perl/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Vulkan</title>
+      <link>https://asurati.github.io/wip/tags/vulkan/</link>
+      <pubDate>Sun, 24 Mar 2024 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/vulkan/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>C</title>
+      <link>https://asurati.github.io/wip/tags/c/</link>
+      <pubDate>Tue, 19 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/c/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Compilers</title>
+      <link>https://asurati.github.io/wip/tags/compilers/</link>
+      <pubDate>Tue, 19 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/compilers/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Ada</title>
+      <link>https://asurati.github.io/wip/tags/ada/</link>
+      <pubDate>Tue, 05 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/ada/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Emacs</title>
+      <link>https://asurati.github.io/wip/tags/emacs/</link>
+      <pubDate>Tue, 05 Dec 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/emacs/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>CPP</title>
+      <link>https://asurati.github.io/wip/tags/cpp/</link>
+      <pubDate>Wed, 09 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/cpp/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Preprocessor</title>
+      <link>https://asurati.github.io/wip/tags/preprocessor/</link>
+      <pubDate>Wed, 09 Aug 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/preprocessor/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Display</title>
+      <link>https://asurati.github.io/wip/tags/display/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/display/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>GPU</title>
+      <link>https://asurati.github.io/wip/tags/gpu/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/gpu/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>RPi</title>
+      <link>https://asurati.github.io/wip/tags/rpi/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/rpi/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Vc4</title>
+      <link>https://asurati.github.io/wip/tags/vc4/</link>
+      <pubDate>Tue, 04 Jul 2023 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/vc4/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>AMD</title>
+      <link>https://asurati.github.io/wip/tags/amd/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/amd/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>CEDAR</title>
+      <link>https://asurati.github.io/wip/tags/cedar/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/cedar/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>HD7350</title>
+      <link>https://asurati.github.io/wip/tags/hd7350/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/hd7350/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Radeon</title>
+      <link>https://asurati.github.io/wip/tags/radeon/</link>
+      <pubDate>Mon, 27 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/radeon/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Fast Clear</title>
+      <link>https://asurati.github.io/wip/tags/fast-clear/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/fast-clear/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>MSAA</title>
+      <link>https://asurati.github.io/wip/tags/msaa/</link>
+      <pubDate>Tue, 14 Jun 2022 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/msaa/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>G73</title>
+      <link>https://asurati.github.io/wip/tags/g73/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/g73/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>GeForce 7600 GT</title>
+      <link>https://asurati.github.io/wip/tags/geforce-7600-gt/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/geforce-7600-gt/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>GPIO</title>
+      <link>https://asurati.github.io/wip/tags/gpio/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/gpio/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>NV4B</title>
+      <link>https://asurati.github.io/wip/tags/nv4b/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/nv4b/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Nvidia</title>
+      <link>https://asurati.github.io/wip/tags/nvidia/</link>
+      <pubDate>Mon, 08 Nov 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/nvidia/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>Clocks</title>
+      <link>https://asurati.github.io/wip/tags/clocks/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/clocks/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>HDMI</title>
+      <link>https://asurati.github.io/wip/tags/hdmi/</link>
+      <pubDate>Fri, 15 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/hdmi/</guid>
+      <description></description>
+    </item>
+    <item>
+      <title>V3D</title>
+      <link>https://asurati.github.io/wip/tags/v3d/</link>
+      <pubDate>Fri, 08 Oct 2021 00:00:00 +0000</pubDate>
+      <guid>https://asurati.github.io/wip/tags/v3d/</guid>
+      <description></description>
+    </item>
+  </channel>
+</rss>
